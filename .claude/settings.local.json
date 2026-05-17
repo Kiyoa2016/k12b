@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm --version)",
+      "Bash(pnpm dev *)",
+      "Bash(npx vite *)",
+      "Bash(netstat -ano)",
+      "Bash(pnpm add *)",
+      "Skill(superpowers:brainstorming)",
+      "Skill(superpowers:brainstorming:*)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:writing-plans:*)",
+      "Bash(npx tsc *)",
+      "Bash(npx -p typescript tsc --noEmit --pretty)",
+      "Bash(npm run *)",
+      "Bash(taskkill /f /im node.exe)",
+      "Bash(curl -s http://localhost:5175/)",
+      "WebFetch(domain:localhost)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5176/)"
+    ]
+  }
+}
