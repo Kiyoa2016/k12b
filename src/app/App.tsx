@@ -63,6 +63,10 @@ import CloudClassroomPlay from './components/CloudClassroomPlay';
 import CloudClassroomReview from './components/CloudClassroomReview';
 import type { Lecture } from './components/LectureEvaluation';
 import type { CloudVideo } from './components/CloudClassroom';
+import TrainingVideo from './components/TrainingVideo';
+import TrainingVideoPlay from './components/TrainingVideoPlay';
+import TrainingVideoManagement from './components/TrainingVideoManagement';
+import type { TrainingVideo as TrainingVideoType } from './components/TrainingVideo';
 
 interface Template {
   id: string;
@@ -74,11 +78,12 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
   const [cloudRelated, setCloudRelated] = useState<CloudVideo[]>([]);
+  const [trainingVideoDetail, setTrainingVideoDetail] = useState<TrainingVideoType | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -194,6 +199,11 @@ export default function App() {
     setCurrentPage('cloudclassroom-play');
   };
 
+  const handleOpenTrainingPlay = (video: TrainingVideoType) => {
+    setTrainingVideoDetail(video);
+    setCurrentPage('training-video-play');
+  };
+
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, template: Template) => {
     setAnchorEl(event.currentTarget);
     setSelectedTemplate(template);
@@ -227,6 +237,8 @@ export default function App() {
       { id: 'cloudclassroom', label: '云课堂' },
       { id: 'cloudclassroom-review', label: '云课堂审核' },
     ]},
+    { id: 'training-video', label: '培训视频', icon: <Videocam /> },
+    { id: 'training-video-mgmt', label: '培训视频管理', icon: <Videocam /> },
     { id: 'central', label: '集控管理', icon: <MenuIcon />, children: [
       { id: 'classroom', label: '教室管理', icon: <People /> },
       { id: 'livestream', label: '实时流', icon: <Videocam /> },
@@ -274,7 +286,7 @@ export default function App() {
                       <MenuItem
                         key={child.id}
                         onClick={() => {
-                          setCurrentPage(child.id as 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review');
+                          setCurrentPage(child.id as 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt');
                           setMenuAnchorEl(null);
                           setActiveMenuId(null);
                         }}
@@ -289,7 +301,7 @@ export default function App() {
                 <Button
                   key={item.id}
                   startIcon={item.icon}
-                  onClick={() => setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review')}
+                  onClick={() => setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt')}
                   variant={currentPage === item.id ? 'contained' : 'text'}
                   sx={{
                     color: currentPage === item.id ? undefined : 'white',
@@ -331,7 +343,7 @@ export default function App() {
                       <ListItem
                         key={`drawer-${child.id}`}
                         onClick={() => {
-                          setCurrentPage(child.id as 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review');
+                          setCurrentPage(child.id as 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt');
                           setDrawerOpen(false);
                         }}
                         className={`cursor-pointer rounded-lg mb-1 ml-4 ${
@@ -350,7 +362,7 @@ export default function App() {
                 ) : (
                   <ListItem
                     onClick={() => {
-                      setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review');
+                      setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt');
                       setDrawerOpen(false);
                     }}
                     className={`cursor-pointer rounded-lg mb-2 ${
@@ -401,6 +413,15 @@ export default function App() {
         <ClassroomManagement />
       ) : currentPage === 'livestream' ? (
         <LiveStream />
+      ) : currentPage === 'training-video' ? (
+        <TrainingVideo onOpenPlay={handleOpenTrainingPlay} />
+      ) : currentPage === 'training-video-play' && trainingVideoDetail ? (
+        <TrainingVideoPlay
+          video={trainingVideoDetail}
+          onBack={() => setCurrentPage('training-video')}
+        />
+      ) : currentPage === 'training-video-mgmt' ? (
+        <TrainingVideoManagement />
       ) : (
         <Container maxWidth="xl" className="py-8">
         {/* 标题栏 */}
