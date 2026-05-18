@@ -237,8 +237,10 @@ export default function App() {
       { id: 'cloudclassroom', label: '云课堂' },
       { id: 'cloudclassroom-review', label: '云课堂审核' },
     ]},
-    { id: 'training-video', label: '培训视频', icon: <Videocam /> },
-    { id: 'training-video-mgmt', label: '培训视频管理', icon: <Videocam /> },
+    { id: 'training-video-parent', label: '培训视频', icon: <Videocam />, children: [
+      { id: 'training-video', label: '培训视频' },
+      { id: 'training-video-mgmt', label: '培训视频管理' },
+    ]},
     { id: 'central', label: '集控管理', icon: <MenuIcon />, children: [
       { id: 'classroom', label: '教室管理', icon: <People /> },
       { id: 'livestream', label: '实时流', icon: <Videocam /> },
