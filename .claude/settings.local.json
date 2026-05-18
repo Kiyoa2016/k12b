@@ -16,7 +16,24 @@
       "Bash(taskkill /f /im node.exe)",
       "Bash(curl -s http://localhost:5175/)",
       "WebFetch(domain:localhost)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5176/)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5176/)",
+      "Skill(superpowers:systematic-debugging)",
+      "Skill(superpowers:systematic-debugging:*)",
+      "Bash(curl -s http://localhost:4173/)",
+      "Bash(curl -s -o /dev/null -w \"JS %{http_code} %{size_download} bytes\\\\n\" http://localhost:4173/assets/index.ADpnnjPT.js)",
+      "Bash(node -e ' *)",
+      "Bash(find \"C:/Users/汪羲/.claude/projects\" -type f 2>/dev/null | head -50)",
+      "Read(//c/Users/汪羲/.claude/projects/**)",
+      "Bash(grep -o '\"content\":\"[^\"]*\\\\\\\\n[^\"]*\"\\\\|\\\\\"content\\\\\":\\\\\"[^\\\\\"]*\\\\|\\\\\"role\\\\\":\\\\\"[a-z]*\\\\\"' \"C:/Users/汪羲/.claude/projects/E--Document-04----01------01--------------/668577bc-53e7-455d-8abc-4eea89449af0.jsonl\")",
+      "Bash(grep -oP '\"role\":\"\\(user|assistant\\)\".*?\"content\":\"[^\"]{0,200}' \"C:/Users/汪羲/.claude/projects/E--Document-04----01------01--------------/668577bc-53e7-455d-8abc-4eea89449af0.jsonl\")",
+      "Bash(grep -oP '\"role\":\"\\(user|assistant\\)\".*?\"content\":\"[^\"]{0,300}' \"C:/Users/汪羲/.claude/projects/E--Document-04----01------01--------------/9007a371-43e5-4430-9de1-f2872494b55f.jsonl\")",
+      "Bash(python3 -c ' *)",
+      "Bash(bash \"C:/Users/汪羲/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/brainstorming/scripts/start-server.sh\" --project-dir \"e:/Document/04 奇意/01 果仁白板/01 原型设计/模板维护管理界面\")",
+      "Bash(git add *)",
+      "Skill(superpowers:subagent-driven-development)",
+      "Skill(superpowers:subagent-driven-development:*)",
+      "Bash(ls \"C:/Users/汪羲/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/subagent-driven-development/\")",
+      "Read(//c/Users/汪羲/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/subagent-driven-development/**)"
     ]
   }
 }
