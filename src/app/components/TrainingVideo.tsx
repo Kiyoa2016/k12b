@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  Box, Typography, Button, Grid, Card, CardContent, Chip,
+  Box, Typography, Grid, Card, CardContent, Chip,
   TextField,
 } from '@mui/material';
 import {
@@ -83,11 +83,11 @@ interface Props {
 export default function TrainingVideo({ onOpenPlay }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   // 只显示已上架的视频
-  const [videos] = useState(defaultVideos);
+  const videos = defaultVideos;
 
   const filtered = videos.filter((v) => {
     if (v.status !== 'published') return false;
-    if (searchTerm && !v.title.includes(searchTerm) && !v.description.includes(searchTerm)) return false;
+    if (searchTerm && !v.title.toLowerCase().includes(searchTerm.toLowerCase()) && !v.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
 
