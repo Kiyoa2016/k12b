@@ -82,11 +82,14 @@ interface Props {
 
 export default function TrainingVideo({ onOpenPlay }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedModule, setSelectedModule] = useState<string | null>(null);
   // 只显示已上架的视频
   const videos = defaultVideos;
+  const moduleKeys = Object.keys(moduleGradients);
 
   const filtered = videos.filter((v) => {
     if (v.status !== 'published') return false;
+    if (selectedModule && v.module !== selectedModule) return false;
     if (searchTerm && !v.title.toLowerCase().includes(searchTerm.toLowerCase()) && !v.description.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     return true;
   });
@@ -113,6 +116,19 @@ export default function TrainingVideo({ onOpenPlay }: Props) {
           }}
           className="w-full md:w-96"
         />
+      </Box>
+
+      {/* 板块筛选 */}
+      <Box className="mb-6 flex flex-wrap items-center gap-2">
+        <Typography variant="caption" color="text.secondary" className="mr-1">板块：</Typography>
+        <Chip label="全部" size="small" onClick={() => setSelectedModule(null)}
+          color={selectedModule === null ? 'primary' : 'default'}
+          variant={selectedModule === null ? 'filled' : 'outlined'} />
+        {moduleKeys.map((m) => (
+          <Chip key={m} label={m} size="small" onClick={() => setSelectedModule(m)}
+            color={selectedModule === m ? 'primary' : 'default'}
+            variant={selectedModule === m ? 'filled' : 'outlined'} />
+        ))}
       </Box>
 
       {/* 视频网格 */}

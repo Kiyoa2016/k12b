@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Box, Typography, Button, TextField, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Paper, IconButton, Chip,
+  TableContainer, TableHead, TableRow, TablePagination, Paper, IconButton, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions, MenuItem,
   FormControl, InputLabel, Select,
 } from '@mui/material';
@@ -34,15 +34,21 @@ function saveVideos(videos: TrainingVideo[]) {
 export default function TrainingVideoManagement() {
   const [videos, setVideos] = useState<TrainingVideo[]>(loadVideos);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedModule, setSelectedModule] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [editingVideo, setEditingVideo] = useState<TrainingVideo | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TrainingVideo | null>(null);
   const [form, setForm] = useState({ title: '', module: '', description: '' });
 
-  const filtered = videos.filter((v) =>
-    v.title.includes(searchTerm) || v.module.includes(searchTerm)
-  );
+  const filtered = videos.filter((v) => {
+    if (selectedModule && v.module !== selectedModule) return false;
+    return v.title.includes(searchTerm) || v.module.includes(searchTerm);
+  });
+
+  const paged = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const resetForm = () => setForm({ title: '', module: '', description: '' });
 
@@ -129,13 +135,26 @@ export default function TrainingVideoManagement() {
       </Box>
 
       {/* 搜索 */}
-      <Box className="mb-4">
+      <Box className="mb-4 flex flex-col md:flex-row gap-4 items-start md:items-center">
         <TextField
           size="small" placeholder="搜索视频标题..." value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           InputProps={{ startAdornment: <Search fontSize="small" className="mr-1 text-gray-400" /> }}
           className="w-full md:w-80"
         />
+      </Box>
+
+      {/* 板块筛选 */}
+      <Box className="mb-4 flex flex-wrap items-center gap-2">
+        <Typography variant="caption" color="text.secondary" className="mr-1">板块：</Typography>
+        <Chip label="全部" size="small" onClick={() => setSelectedModule(null)}
+          color={selectedModule === null ? 'primary' : 'default'}
+          variant={selectedModule === null ? 'filled' : 'outlined'} />
+        {moduleOptions.map((m) => (
+          <Chip key={m} label={m} size="small" onClick={() => { setSelectedModule(m); setPage(0); }}
+            color={selectedModule === m ? 'primary' : 'default'}
+            variant={selectedModule === m ? 'filled' : 'outlined'} />
+        ))}
       </Box>
 
       {/* 视频表格 */}
@@ -151,7 +170,7 @@ export default function TrainingVideoManagement() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filtered.map((video) => (
+            {paged.map((video) => (
               <TableRow key={video.id} hover>
                 <TableCell>
                   <Box className="flex items-center gap-2">
@@ -203,6 +222,21 @@ export default function TrainingVideoManagement() {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {filtered.length > 0 && (
+        <TablePagination
+          component="div"
+          count={filtered.length}
+          page={page}
+          rowsPerPage={rowsPerPage}
+          onPageChange={(_, newPage) => setPage(newPage)}
+          onRowsPerPageChange={(e) => {
+            setRowsPerPage(parseInt(e.target.value, 10));
+            setPage(0);
+          }}
+          rowsPerPageOptions={[5, 10, 25]}
+        />
+      )}
 
       {/* 上传/编辑弹窗 */}
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
