@@ -50,30 +50,32 @@ interface Classroom {
   status: string;
   buildingId: string;
   floorId: string;
+  teacherVideoUrl?: string;
+  studentVideoUrl?: string;
+  whiteboardVideoUrl?: string;
 }
 
-const buildings: Building[] = [
-  {
-    id: 'east',
-    name: '东教学楼',
-    floors: [
-      { id: 'east-1', name: '一楼' },
-      { id: 'east-2', name: '二楼' },
-      { id: 'east-3', name: '三楼' },
-    ],
-  },
-  {
-    id: 'west',
-    name: '西教学楼',
-    floors: [
-      { id: 'west-1', name: '一楼' },
-      { id: 'west-2', name: '二楼' },
-      { id: 'west-3', name: '三楼' },
-    ],
-  },
-];
-
 export default function ClassroomManagement() {
+  const [buildings, setBuildings] = useState<Building[]>([
+    {
+      id: 'east',
+      name: '东教学楼',
+      floors: [
+        { id: 'east-1', name: '一楼' },
+        { id: 'east-2', name: '二楼' },
+        { id: 'east-3', name: '三楼' },
+      ],
+    },
+    {
+      id: 'west',
+      name: '西教学楼',
+      floors: [
+        { id: 'west-1', name: '一楼' },
+        { id: 'west-2', name: '二楼' },
+        { id: 'west-3', name: '三楼' },
+      ],
+    },
+  ]);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -86,8 +88,12 @@ export default function ClassroomManagement() {
     name: '',
     school: '',
     grade: '',
+    type: '',
     location: '',
     description: '',
+    teacherVideoUrl: '',
+    studentVideoUrl: '',
+    whiteboardVideoUrl: '',
   });
   const [controlDialogOpen, setControlDialogOpen] = useState(false);
   const [controllingClassroom, setControllingClassroom] = useState<Classroom | null>(null);
@@ -95,6 +101,13 @@ export default function ClassroomManagement() {
   // 左侧楼栋选择状态
   const [expandedBuilding, setExpandedBuilding] = useState<string>('east');
   const [selectedFloorId, setSelectedFloorId] = useState<string>('east-1');
+
+  // 添加楼栋/楼层
+  const [addBuildingDialogOpen, setAddBuildingDialogOpen] = useState(false);
+  const [addFloorDialogOpen, setAddFloorDialogOpen] = useState(false);
+  const [addFloorTargetBuilding, setAddFloorTargetBuilding] = useState<string>('');
+  const [newBuildingName, setNewBuildingName] = useState('');
+  const [newFloorName, setNewFloorName] = useState('');
 
   const defaultSchool = '成都市仁寿中学（双流校区）';
 
@@ -106,6 +119,9 @@ export default function ClassroomManagement() {
     type: '',
     location: '',
     description: '',
+    teacherVideoUrl: '',
+    studentVideoUrl: '',
+    whiteboardVideoUrl: '',
   });
 
   const [classrooms, setClassrooms] = useState<Classroom[]>([
@@ -169,6 +185,7 @@ export default function ClassroomManagement() {
     setAddDialogOpen(false);
     setNewClassroom({
       name: '', code: '', school: defaultSchool, grade: '', type: '', location: '', description: '',
+      teacherVideoUrl: '', studentVideoUrl: '', whiteboardVideoUrl: '',
     });
   };
 
@@ -176,7 +193,10 @@ export default function ClassroomManagement() {
     setEditingClassroom(classroom);
     setEditForm({
       name: classroom.name, school: classroom.school,
-      grade: classroom.grade, location: classroom.location, description: '',
+      grade: classroom.grade, type: (classroom as any).type || '', location: classroom.location, description: '',
+      teacherVideoUrl: classroom.teacherVideoUrl || '',
+      studentVideoUrl: classroom.studentVideoUrl || '',
+      whiteboardVideoUrl: classroom.whiteboardVideoUrl || '',
     });
     setEditDialogOpen(true);
   };
@@ -191,7 +211,14 @@ export default function ClassroomManagement() {
     setClassrooms((prev) =>
       prev.map((c) =>
         c.id === editingClassroom.id
-          ? { ...c, name: editForm.name, school: editForm.school, grade: editForm.grade, location: editForm.location }
+          ? {
+              ...c, name: editForm.name, school: editForm.school, grade: editForm.grade,
+              location: editForm.location, description: editForm.description,
+              type: editForm.type,
+              teacherVideoUrl: editForm.teacherVideoUrl,
+              studentVideoUrl: editForm.studentVideoUrl,
+              whiteboardVideoUrl: editForm.whiteboardVideoUrl,
+            }
           : c
       )
     );
@@ -203,6 +230,29 @@ export default function ClassroomManagement() {
     setExpandedBuilding(expandedBuilding === buildingId ? '' : buildingId);
   };
 
+  const handleAddBuilding = () => {
+    if (!newBuildingName.trim()) return;
+    const id = 'bld-' + Date.now().toString();
+    setBuildings((prev) => [...prev, { id, name: newBuildingName.trim(), floors: [] }]);
+    setNewBuildingName('');
+    setAddBuildingDialogOpen(false);
+  };
+
+  const handleAddFloor = () => {
+    if (!newFloorName.trim() || !addFloorTargetBuilding) return;
+    const id = addFloorTargetBuilding + '-' + Date.now().toString();
+    setBuildings((prev) =>
+      prev.map((b) =>
+        b.id === addFloorTargetBuilding
+          ? { ...b, floors: [...b.floors, { id, name: newFloorName.trim() }] }
+          : b
+      )
+    );
+    setNewFloorName('');
+    setAddFloorDialogOpen(false);
+    setAddFloorTargetBuilding('');
+  };
+
   const selectedBuilding = buildings.find((b) => b.floors.some((f) => f.id === selectedFloorId));
   const selectedFloor = buildings.flatMap((b) => b.floors).find((f) => f.id === selectedFloorId);
 
@@ -211,9 +261,14 @@ export default function ClassroomManagement() {
       {/* 左侧楼栋导航 */}
       <Box className="w-56 bg-white border-r border-gray-200 flex-shrink-0 overflow-auto">
         <Box className="p-4">
-          <Typography variant="subtitle1" className="font-bold mb-3 text-gray-700">
-            教学楼
-          </Typography>
+          <Box className="flex items-center justify-between mb-3">
+            <Typography variant="subtitle1" className="font-bold text-gray-700">
+              教学楼
+            </Typography>
+            <IconButton size="small" onClick={() => setAddBuildingDialogOpen(true)} title="添加教学楼">
+              <Add fontSize="small" className="text-gray-500" />
+            </IconButton>
+          </Box>
           {buildings.map((building) => (
             <Box key={building.id}>
               <Box
@@ -233,6 +288,11 @@ export default function ClassroomManagement() {
                 <Typography variant="body2" className="font-medium">
                   {building.name}
                 </Typography>
+                <Box className="ml-auto">
+                  <IconButton size="small" className="p-0.5" onClick={(e) => { e.stopPropagation(); setAddFloorTargetBuilding(building.id); setNewFloorName(''); setAddFloorDialogOpen(true); }} title="添加楼层">
+                    <Add fontSize="small" className="text-gray-400" />
+                  </IconButton>
+                </Box>
               </Box>
               <Collapse in={expandedBuilding === building.id}>
                 <Box className="ml-4">
@@ -407,6 +467,27 @@ export default function ClassroomManagement() {
                   <Typography variant="body2" color="text.secondary" className="mb-1">状态</Typography>
                   <Typography variant="body1">{selectedClassroom.status}</Typography>
                 </Grid>
+                {(selectedClassroom.teacherVideoUrl || selectedClassroom.studentVideoUrl || selectedClassroom.whiteboardVideoUrl) && (
+                  <>
+                    <Grid item xs={12}>
+                      <Box className="border-t pt-3 mt-2">
+                        <Typography variant="subtitle2" className="font-bold text-gray-700 mb-2">视频流配置</Typography>
+                      </Box>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary" className="mb-1">老师视频流地址</Typography>
+                      <Typography variant="body1" className="text-sm">{selectedClassroom.teacherVideoUrl || '-'}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary" className="mb-1">学生视频流地址</Typography>
+                      <Typography variant="body1" className="text-sm">{selectedClassroom.studentVideoUrl || '-'}</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="body2" color="text.secondary" className="mb-1">白板视频流地址</Typography>
+                      <Typography variant="body1" className="text-sm">{selectedClassroom.whiteboardVideoUrl || '-'}</Typography>
+                    </Grid>
+                  </>
+                )}
               </Grid>
             </Box>
           )}
@@ -511,6 +592,43 @@ export default function ClassroomManagement() {
                     </Box>
                   </td>
                 </tr>
+                {newClassroom.type === '听评课教室' && (
+                  <>
+                    <tr>
+                      <td colSpan={2}>
+                        <Typography variant="subtitle2" className="font-bold text-gray-700 mb-2">视频流配置</Typography>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <Box>
+                          <Typography variant="body2" className="mb-2">老师视频流地址:</Typography>
+                          <TextField fullWidth size="small" value={newClassroom.teacherVideoUrl}
+                            onChange={(e) => setNewClassroom({ ...newClassroom, teacherVideoUrl: e.target.value })}
+                            placeholder="rtmp://example.com/teacher" />
+                        </Box>
+                      </td>
+                      <td>
+                        <Box>
+                          <Typography variant="body2" className="mb-2">学生视频流地址:</Typography>
+                          <TextField fullWidth size="small" value={newClassroom.studentVideoUrl}
+                            onChange={(e) => setNewClassroom({ ...newClassroom, studentVideoUrl: e.target.value })}
+                            placeholder="rtmp://example.com/student" />
+                        </Box>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2}>
+                        <Box>
+                          <Typography variant="body2" className="mb-2">白板视频流地址:</Typography>
+                          <TextField fullWidth size="small" value={newClassroom.whiteboardVideoUrl}
+                            onChange={(e) => setNewClassroom({ ...newClassroom, whiteboardVideoUrl: e.target.value })}
+                            placeholder="rtmp://example.com/whiteboard" />
+                        </Box>
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </Box>
@@ -590,6 +708,26 @@ export default function ClassroomManagement() {
                 <tr>
                   <td colSpan={2}>
                     <Box>
+                      <Typography variant="body2" className="mb-2">教室类型:</Typography>
+                      <FormControl fullWidth size="small">
+                        <Select
+                          value={editForm.type}
+                          onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}
+                          displayEmpty
+                        >
+                          <MenuItem value="">
+                            <Typography variant="body2" color="text.secondary">请选择教室类型</Typography>
+                          </MenuItem>
+                          <MenuItem value="听评课教室">听评课教室</MenuItem>
+                          <MenuItem value="常规授课教室">常规授课教室</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Box>
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={2}>
+                    <Box>
                       <Typography variant="body2" className="mb-2">教室描述:</Typography>
                       <TextField fullWidth size="small" multiline rows={4}
                         value={editForm.description}
@@ -598,6 +736,43 @@ export default function ClassroomManagement() {
                     </Box>
                   </td>
                 </tr>
+                {editForm.type === '听评课教室' && (
+                  <>
+                    <tr>
+                      <td colSpan={2}>
+                        <Typography variant="subtitle2" className="font-bold text-gray-700 mb-2">视频流配置</Typography>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>
+                        <Box>
+                          <Typography variant="body2" className="mb-2">老师视频流地址:</Typography>
+                          <TextField fullWidth size="small" value={editForm.teacherVideoUrl}
+                            onChange={(e) => setEditForm({ ...editForm, teacherVideoUrl: e.target.value })}
+                            placeholder="rtmp://example.com/teacher" />
+                        </Box>
+                      </td>
+                      <td>
+                        <Box>
+                          <Typography variant="body2" className="mb-2">学生视频流地址:</Typography>
+                          <TextField fullWidth size="small" value={editForm.studentVideoUrl}
+                            onChange={(e) => setEditForm({ ...editForm, studentVideoUrl: e.target.value })}
+                            placeholder="rtmp://example.com/student" />
+                        </Box>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td colSpan={2}>
+                        <Box>
+                          <Typography variant="body2" className="mb-2">白板视频流地址:</Typography>
+                          <TextField fullWidth size="small" value={editForm.whiteboardVideoUrl}
+                            onChange={(e) => setEditForm({ ...editForm, whiteboardVideoUrl: e.target.value })}
+                            placeholder="rtmp://example.com/whiteboard" />
+                        </Box>
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </Box>
@@ -616,6 +791,38 @@ export default function ClassroomManagement() {
           classroom={{ name: controllingClassroom.name, code: controllingClassroom.code }}
         />
       )}
+
+      {/* 添加教学楼弹窗 */}
+      <Dialog open={addBuildingDialogOpen} onClose={() => setAddBuildingDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>添加教学楼</DialogTitle>
+        <DialogContent>
+          <Box className="pt-2">
+            <TextField fullWidth size="small" label="教学楼名称" value={newBuildingName}
+              onChange={(e) => setNewBuildingName(e.target.value)}
+              placeholder="请输入教学楼名称" autoFocus />
+          </Box>
+        </DialogContent>
+        <DialogActions className="px-6 pb-4">
+          <Button onClick={() => setAddBuildingDialogOpen(false)} variant="outlined">取消</Button>
+          <Button onClick={handleAddBuilding} variant="contained" disabled={!newBuildingName.trim()}>确定</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 添加楼层弹窗 */}
+      <Dialog open={addFloorDialogOpen} onClose={() => setAddFloorDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>添加楼层</DialogTitle>
+        <DialogContent>
+          <Box className="pt-2">
+            <TextField fullWidth size="small" label="楼层名称" value={newFloorName}
+              onChange={(e) => setNewFloorName(e.target.value)}
+              placeholder="例如：一楼、二楼" autoFocus />
+          </Box>
+        </DialogContent>
+        <DialogActions className="px-6 pb-4">
+          <Button onClick={() => setAddFloorDialogOpen(false)} variant="outlined">取消</Button>
+          <Button onClick={handleAddFloor} variant="contained" disabled={!newFloorName.trim()}>确定</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
