@@ -34,7 +34,8 @@
       "Skill(superpowers:subagent-driven-development:*)",
       "Bash(ls \"C:/Users/汪羲/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/subagent-driven-development/\")",
       "Read(//c/Users/汪羲/.claude/plugins/cache/claude-plugins-official/superpowers/5.1.0/skills/subagent-driven-development/**)",
-      "Bash(npx --yes tsc --noEmit)"
+      "Bash(npx --yes tsc --noEmit)",
+      "Bash(git push *)"
     ]
   }
 }
