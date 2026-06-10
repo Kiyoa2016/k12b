@@ -50,6 +50,7 @@ import {
   Videocam,
   RateReview,
   StarBorder,
+  Security,
 } from '@mui/icons-material';
 import TeacherManagement from './components/TeacherManagement';
 import SchoolManagement from './components/SchoolManagement';
@@ -67,6 +68,10 @@ import TrainingVideo from './components/TrainingVideo';
 import TrainingVideoPlay from './components/TrainingVideoPlay';
 import TrainingVideoManagement from './components/TrainingVideoManagement';
 import type { TrainingVideo as TrainingVideoType } from './components/TrainingVideo';
+import { PermissionProvider } from './store/PermissionContext';
+import RoleManagement from './components/RoleManagement';
+import PermissionConfig from './components/PermissionConfig';
+import type { Role } from './types/permissions';
 
 interface Template {
   id: string;
@@ -78,7 +83,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -95,6 +100,7 @@ export default function App() {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [uploadType, setUploadType] = useState<'课件' | '教案' | '评分表'>('课件');
   const [dragActive, setDragActive] = useState(false);
+  const [configRole, setConfigRole] = useState<Role | null>(null);
 
   // 示例数据
   const [templates, setTemplates] = useState<Template[]>([
@@ -233,6 +239,7 @@ export default function App() {
     { id: 'school', label: '学校管理', icon: <People /> },
     { id: 'questionbank', label: '校本资源', icon: <LibraryBooks /> },
     { id: 'lecture', label: '听评课', icon: <RateReview /> },
+    { id: 'role-mgmt', label: '角色管理', icon: <Security /> },
     { id: 'cloudclassroom-parent', label: '云课堂', icon: <Videocam />, children: [
       { id: 'cloudclassroom', label: '云课堂' },
       { id: 'cloudclassroom-review', label: '云课堂审核' },
@@ -248,6 +255,7 @@ export default function App() {
   ];
 
   return (
+    <PermissionProvider>
     <Box className="min-h-screen bg-gray-50">
       {/* 顶部导航栏 */}
       <AppBar position="static" elevation={0} className="bg-white border-b border-gray-200">
@@ -303,7 +311,7 @@ export default function App() {
                 <Button
                   key={item.id}
                   startIcon={item.icon}
-                  onClick={() => setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt')}
+                  onClick={() => setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt' | 'role-mgmt')}
                   variant={currentPage === item.id ? 'contained' : 'text'}
                   sx={{
                     color: currentPage === item.id ? undefined : 'white',
@@ -424,6 +432,8 @@ export default function App() {
         />
       ) : currentPage === 'training-video-mgmt' ? (
         <TrainingVideoManagement />
+      ) : currentPage === 'role-mgmt' ? (
+        <RoleManagement onEditPermissions={(role) => setConfigRole(role)} />
       ) : (
         <Container maxWidth="xl" className="py-8">
         {/* 标题栏 */}
@@ -761,6 +771,15 @@ export default function App() {
         </Dialog>
         </Container>
       )}
+
+      {configRole && (
+        <PermissionConfig
+          role={configRole}
+          open={Boolean(configRole)}
+          onClose={() => setConfigRole(null)}
+        />
+      )}
     </Box>
+    </PermissionProvider>
   );
 }
