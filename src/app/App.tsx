@@ -25,7 +25,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Drawer,
   AppBar,
   Toolbar,
 } from '@mui/material';
@@ -51,6 +50,9 @@ import {
   RateReview,
   StarBorder,
   Security,
+  Cloud,
+  School,
+  Mic,
 } from '@mui/icons-material';
 import TeacherManagement from './components/TeacherManagement';
 import SchoolManagement from './components/SchoolManagement';
@@ -72,6 +74,7 @@ import { PermissionProvider } from './store/PermissionContext';
 import RoleManagement from './components/RoleManagement';
 import PermissionConfig from './components/PermissionConfig';
 import type { Role } from './types/permissions';
+import VoiceManagement from './components/VoiceManagement';
 
 interface Template {
   id: string;
@@ -83,13 +86,12 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
   const [cloudRelated, setCloudRelated] = useState<CloudVideo[]>([]);
   const [trainingVideoDetail, setTrainingVideoDetail] = useState<TrainingVideoType | null>(null);
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -233,26 +235,56 @@ export default function App() {
     return type === '课件' ? <Slideshow sx={sx} /> : <Description sx={sx} />;
   };
 
-  const menuItems = [
-    { id: 'template', label: '模板管理', icon: <Folder /> },
-    { id: 'teacher', label: '教师管理', icon: <People /> },
-    { id: 'school', label: '学校管理', icon: <People /> },
-    { id: 'questionbank', label: '校本资源', icon: <LibraryBooks /> },
-    { id: 'lecture', label: '听评课', icon: <RateReview /> },
-    { id: 'role-mgmt', label: '角色管理', icon: <Security /> },
-    { id: 'cloudclassroom-parent', label: '云课堂', icon: <Videocam />, children: [
-      { id: 'cloudclassroom', label: '云课堂' },
-      { id: 'cloudclassroom-review', label: '云课堂审核' },
-    ]},
-    { id: 'training-video-parent', label: '培训视频', icon: <Videocam />, children: [
-      { id: 'training-video', label: '培训视频' },
-      { id: 'training-video-mgmt', label: '培训视频管理' },
-    ]},
-    { id: 'central', label: '集控管理', icon: <MenuIcon />, children: [
-      { id: 'classroom', label: '教室管理', icon: <People /> },
-      { id: 'livestream', label: '实时流', icon: <Videocam /> },
-    ]},
+  const menuGroups = [
+    {
+      id: 'guorenyun',
+      label: '果仁云菜单',
+      icon: <Cloud />,
+      children: [
+        { id: 'school', label: '学校管理', icon: <People />, pageId: 'school' },
+        {
+          id: 'training-video-parent', label: '培训视频', icon: <Videocam />,
+          children: [
+            { id: 'training-video', label: '培训视频', pageId: 'training-video' },
+            { id: 'training-video-mgmt', label: '培训视频管理', pageId: 'training-video-mgmt' },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'school-level',
+      label: '校级菜单',
+      icon: <School />,
+      children: [
+        { id: 'template', label: '模板管理', icon: <Folder />, pageId: 'template' },
+        { id: 'teacher', label: '教师管理', icon: <People />, pageId: 'teacher' },
+        { id: 'questionbank', label: '校本资源', icon: <LibraryBooks />, pageId: 'questionbank' },
+        { id: 'lecture', label: '听评课', icon: <RateReview />, pageId: 'lecture' },
+        { id: 'role-mgmt', label: '角色管理', icon: <Security />, pageId: 'role-mgmt' },
+        { id: 'voice-mgmt', label: '语音管理', icon: <Mic />, pageId: 'voice-mgmt' },
+        {
+          id: 'cloudclassroom-parent', label: '云课堂', icon: <Videocam />,
+          children: [
+            { id: 'cloudclassroom', label: '云课堂', pageId: 'cloudclassroom' },
+            { id: 'cloudclassroom-review', label: '云课堂审核', pageId: 'cloudclassroom-review' },
+          ],
+        },
+        {
+          id: 'central', label: '集控管理', icon: <MenuIcon />,
+          children: [
+            { id: 'classroom', label: '教室管理', pageId: 'classroom' },
+            { id: 'livestream', label: '实时流', pageId: 'livestream' },
+          ],
+        },
+      ],
+    },
   ];
+
+  const handleNavClick = (pageId: string) => {
+    setCurrentPage(pageId as any);
+    setMenuAnchorEl(null);
+    setActiveMenuId(null);
+  };
 
   return (
     <PermissionProvider>
@@ -260,138 +292,67 @@ export default function App() {
       {/* 顶部导航栏 */}
       <AppBar position="static" elevation={0} className="bg-white border-b border-gray-200">
         <Toolbar>
-          <IconButton
-            edge="start"
-            onClick={() => setDrawerOpen(true)}
-            className="mr-2 text-gray-700 md:hidden"
-          >
-            <MenuIcon />
-          </IconButton>
           <Typography variant="h6" className="text-gray-800 font-bold">
             教学管理系统
           </Typography>
           <Box className="ml-auto hidden md:flex gap-2">
-            {menuItems.map((item) =>
-              item.children ? (
-                <Box key={item.id}>
+            {menuGroups.map((group) => {
+              const groupActive = group.children.some(item => {
+                if ('children' in item) {
+                  return (item as any).children.some((child: any) => currentPage === child.pageId);
+                }
+                return currentPage === (item as any).pageId;
+              });
+              return (
+                <Box key={group.id}>
                   <Button
-                    startIcon={item.icon}
-                    onClick={(e) => { setMenuAnchorEl(e.currentTarget); setActiveMenuId(item.id); }}
-                    variant={item.children?.some(c => currentPage === c.id) ? 'contained' : 'text'}
+                    startIcon={group.icon}
+                    onClick={(e) => { setMenuAnchorEl(e.currentTarget); setActiveMenuId(group.id); }}
+                    variant={groupActive ? 'contained' : 'text'}
                     sx={{
-                      color: item.children?.some(c => currentPage === c.id) ? undefined : 'white',
+                      color: groupActive ? undefined : 'white',
                       '&:hover': {
-                        backgroundColor: item.children?.some(c => currentPage === c.id) ? undefined : 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: groupActive ? undefined : 'rgba(255, 255, 255, 0.1)',
                       }
                     }}
                   >
-                    {item.label}
+                    {group.label}
                   </Button>
                   <Menu
                     anchorEl={menuAnchorEl}
-                    open={Boolean(menuAnchorEl) && activeMenuId === item.id}
+                    open={Boolean(menuAnchorEl) && activeMenuId === group.id}
                     onClose={() => { setMenuAnchorEl(null); setActiveMenuId(null); }}
                   >
-                    {item.children.map((child) => (
-                      <MenuItem
-                        key={child.id}
-                        onClick={() => {
-                          setCurrentPage(child.id as 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt');
-                          setMenuAnchorEl(null);
-                          setActiveMenuId(null);
-                        }}
-                      >
-                        {child.icon}
-                        <span className="ml-2">{child.label}</span>
-                      </MenuItem>
-                    ))}
+                    {group.children.flatMap((item: any) => {
+                      if (item.children) {
+                        return [
+                          <Typography key={`label-${item.id}`} variant="caption" color="text.secondary" sx={{ px: 2, pt: 1, pb: 0.5, display: 'block', fontWeight: 600, fontSize: 11 }}>
+                            {item.label}
+                          </Typography>,
+                          ...item.children.map((child: any) => (
+                            <MenuItem key={child.id} onClick={() => handleNavClick(child.pageId)} sx={{ pl: 3, py: 0.6 }}>
+                              {child.label}
+                            </MenuItem>
+                          )),
+                        ];
+                      }
+                      return (
+                        <MenuItem key={item.id} onClick={() => handleNavClick(item.pageId)}>
+                          <Box className="flex items-center gap-2">
+                            {item.icon}
+                            <span>{item.label}</span>
+                          </Box>
+                        </MenuItem>
+                      );
+                    })}
                   </Menu>
                 </Box>
-              ) : (
-                <Button
-                  key={item.id}
-                  startIcon={item.icon}
-                  onClick={() => setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt' | 'role-mgmt')}
-                  variant={currentPage === item.id ? 'contained' : 'text'}
-                  sx={{
-                    color: currentPage === item.id ? undefined : 'white',
-                    '&:hover': {
-                      backgroundColor: currentPage === item.id ? undefined : 'rgba(255, 255, 255, 0.1)',
-                    }
-                  }}
-                >
-                  {item.label}
-                </Button>
-              )
-            )}
+              );
+            })}
           </Box>
         </Toolbar>
       </AppBar>
 
-      {/* 移动端侧边栏 */}
-      <Drawer anchor="left" open={drawerOpen} onClose={() => setDrawerOpen(false)}>
-        <Box className="w-64 p-4">
-          <Typography variant="h6" className="mb-4 font-bold">
-            菜单
-          </Typography>
-          <List>
-            {menuItems.map((item) => (
-              <Box key={`drawer-${item.id}`}>
-                {item.children ? (
-                  <>
-                    <ListItem
-                      className="cursor-pointer rounded-lg mb-1"
-                    >
-                      <ListItemAvatar>
-                        <Avatar className="bg-gray-100">
-                          {item.icon}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText primary={item.label} />
-                    </ListItem>
-                    {item.children.map((child) => (
-                      <ListItem
-                        key={`drawer-${child.id}`}
-                        onClick={() => {
-                          setCurrentPage(child.id as 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt');
-                          setDrawerOpen(false);
-                        }}
-                        className={`cursor-pointer rounded-lg mb-1 ml-4 ${
-                          currentPage === child.id ? 'bg-blue-50 text-blue-600' : ''
-                        }`}
-                      >
-                        <ListItemAvatar>
-                          <Avatar className={currentPage === child.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100'}>
-                            {child.icon}
-                          </Avatar>
-                        </ListItemAvatar>
-                        <ListItemText primary={child.label} />
-                      </ListItem>
-                    ))}
-                  </>
-                ) : (
-                  <ListItem
-                    onClick={() => {
-                      setCurrentPage(item.id as 'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'cloudclassroom' | 'cloudclassroom-review' | 'training-video' | 'training-video-mgmt');
-                      setDrawerOpen(false);
-                    }}
-                    className={`cursor-pointer rounded-lg mb-2 ${
-                      currentPage === item.id ? 'bg-blue-50 text-blue-600' : ''
-                    }`}
-                  >
-                    <ListItemAvatar>
-                      <Avatar className={currentPage === item.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100'}>
-                        {item.icon}
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText primary={item.label} />
-                  </ListItem>
-                )}
-              </Box>
-            ))}
-          </List>
-        </Box>
-      </Drawer>
 
       {/* 页面内容 */}
       {currentPage === 'teacher' ? (
@@ -434,6 +395,8 @@ export default function App() {
         <TrainingVideoManagement />
       ) : currentPage === 'role-mgmt' ? (
         <RoleManagement onEditPermissions={(role) => setConfigRole(role)} />
+      ) : currentPage === 'voice-mgmt' ? (
+        <VoiceManagement />
       ) : (
         <Container maxWidth="xl" className="py-8">
         {/* 标题栏 */}
