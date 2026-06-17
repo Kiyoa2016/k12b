@@ -120,7 +120,7 @@ function formatDate(d: Date): string {
   const D = String(d.getDate()).padStart(2, '0');
   const h = String(d.getHours()).padStart(2, '0');
   const m = String(d.getMinutes()).padStart(2, '0');
-  return `2026-${M}-${D} ${h}:${m}`;
+  return `${d.getFullYear()}-${M}-${D} ${h}:${m}`;
 }
 
 const BUILDINGS = [
@@ -180,10 +180,11 @@ function generateDevices(): Device[] {
         const anomalies: AnomalyRecord[] = Array.from({ length: anomalyCount }, () => {
           const t = new Date(Date.now() - rand(1, 30) * 86400000);
           const statusRand = Math.random();
+          const anomalyType = pick(ANOMALY_TYPES);
           return {
             time: formatDate(t),
-            type: pick(ANOMALY_TYPES),
-            desc: `${pick(ANOMALY_TYPES)}异常`,
+            type: anomalyType,
+            desc: anomalyType,
             status: statusRand < 0.7 ? 'resolved' : statusRand < 0.85 ? 'processing' : 'unresolved',
           };
         });
