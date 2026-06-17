@@ -173,7 +173,7 @@ function generateMockHistory(plans: BroadcastPlan[]): BroadcastHistory[] {
         planId: plan.id,
         planName: plan.name,
         deviceId: did,
-        deviceName: DEVICE_NAMES[parseInt(did) % DEVICE_NAMES.length],
+        deviceName: DEVICE_NAMES[parseInt(did, 10) % DEVICE_NAMES.length],
         startTime: plan.startTime,
         endTime: plan.status === 'error' ? undefined : plan.endTime,
         status: plan.status === 'error' ? 'failed' as ExecStatus : plan.status === 'running' ? 'running' as ExecStatus : 'success' as ExecStatus,
@@ -606,7 +606,7 @@ function PlanDetailDialog({
         <Typography variant="subtitle2" className="font-bold mb-3">关联设备</Typography>
         <Box className="flex flex-wrap gap-2 mb-6">
           {plan.deviceIds.map((id) => (
-            <Chip key={id} label={DEVICE_NAMES[parseInt(id) % DEVICE_NAMES.length]}
+            <Chip key={id} label={DEVICE_NAMES[parseInt(id, 10) % DEVICE_NAMES.length]}
               size="small" icon={<Computer />} variant="outlined" />
           ))}
         </Box>
@@ -665,6 +665,7 @@ export default function NewsBroadcast() {
   const [execPage, setExecPage] = useState(0);
   const [execRowsPerPage, setExecRowsPerPage] = useState(10);
   const [execPlanFilter, setExecPlanFilter] = useState('all');
+  const [execDeviceFilter, setExecDeviceFilter] = useState('all');
 
   const filteredPlans = plans.filter((p) => {
     if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -677,6 +678,7 @@ export default function NewsBroadcast() {
 
   const filteredExec = histories.filter((h) => {
     if (execPlanFilter !== 'all' && h.planId !== execPlanFilter) return false;
+    if (execDeviceFilter !== 'all' && h.deviceId !== execDeviceFilter) return false;
     return true;
   });
   const pagedExec = filteredExec.slice(execPage * execRowsPerPage, execPage * execRowsPerPage + execRowsPerPage);
@@ -752,7 +754,7 @@ export default function NewsBroadcast() {
                 sx={{ minWidth: 240 }}
               />
               <FormControl size="small" sx={{ minWidth: 100 }}>
-                <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); setPage(0); }}>
+                <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as BroadcastStatus); setPage(0); }}>
                   <MenuItem value="all">全部状态</MenuItem>
                   <MenuItem value="running">运行中</MenuItem>
                   <MenuItem value="pending">待执行</MenuItem>
@@ -761,7 +763,7 @@ export default function NewsBroadcast() {
                 </Select>
               </FormControl>
               <FormControl size="small" sx={{ minWidth: 100 }}>
-                <Select value={methodFilter} onChange={(e) => { setMethodFilter(e.target.value as any); setPage(0); }}>
+                <Select value={methodFilter} onChange={(e) => { setMethodFilter(e.target.value as BroadcastMethod); setPage(0); }}>
                   <MenuItem value="all">全部方式</MenuItem>
                   <MenuItem value="webpage">新闻网页</MenuItem>
                   <MenuItem value="video">视频文件</MenuItem>
@@ -848,9 +850,15 @@ export default function NewsBroadcast() {
           <>
             <Box className="mb-4 flex items-center gap-3">
               <FormControl size="small" sx={{ minWidth: 160 }}>
-                <Select value={execPlanFilter} onChange={(e) => { setExecPlanFilter(e.target.value); setExecPage(0); }}>
+                <Select value={execPlanFilter} onChange={(e) => { setExecPlanFilter(e.target.value); setExecDeviceFilter('all'); setExecPage(0); }}>
                   <MenuItem value="all">全部计划</MenuItem>
                   {plans.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <Select value={execDeviceFilter} onChange={(e) => { setExecDeviceFilter(e.target.value); setExecPage(0); }}>
+                  <MenuItem value="all">全部设备</MenuItem>
+                  {DEVICE_NAMES.map((name, i) => <MenuItem key={i} value={String(i)}>{name}</MenuItem>)}
                 </Select>
               </FormControl>
               <Typography variant="caption" color="text.secondary">共 {filteredExec.length} 条记录</Typography>
