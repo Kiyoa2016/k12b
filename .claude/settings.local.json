@@ -46,7 +46,9 @@
       "Bash(rm tsconfig.json)",
       "Bash(ls *.json)",
       "Bash(ls tsconfig*)",
-      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)"
+      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(bash \"C:\\\\Users\\\\汪羲\\\\.claude\\\\plugins\\\\cache\\\\claude-plugins-official\\\\superpowers\\\\5.1.0\\\\skills\\\\brainstorming\\\\scripts\\\\start-server.sh\" --project-dir \"E:\\\\Document\\\\04 奇意\\\\01 果仁白板\\\\01 原型设计\\\\模板维护管理界面\")",
+      "Bash(bash *)"
     ]
   }
 }
