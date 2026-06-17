@@ -1,19 +1,19 @@
 import { useState, useMemo } from 'react';
 import {
-  Box, Typography, Card, CardContent, Button, IconButton,
-  TextField, InputAdornment, Chip,
+  Box, Typography, Button, IconButton,
+  TextField, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Tabs, Tab, Table, TableBody, TableCell, TableContainer,
-  TableHead, TableRow, TablePagination,
+  TableHead, TableRow,
   Select, MenuItem, FormControl, FormControlLabel,
   Checkbox, Switch, LinearProgress, Alert,
   Paper, Tooltip,
 } from '@mui/material';
 import {
-  Delete, CleaningServices, FolderOpen, Warning, Mic,
-  Computer, CheckCircle, Cancel, Search, Close,
-  Storage, VideoFile, Image, MusicNote, Description,
-  PlayArrow, Download, Upload, Preview,
+  CleaningServices, FolderOpen, Warning, Mic,
+  Computer, CheckCircle, Close,
+  VideoFile, Image, MusicNote, Description,
+  Download, Upload, Preview,
 } from '@mui/icons-material';
 
 // ─── 类型定义 ───
@@ -324,11 +324,11 @@ function DiskCleanupPanel() {
         <Typography variant="body2" className="font-medium mb-2">清理项目</Typography>
         <Box className="space-y-2">
           <FormControlLabel control={<Checkbox size="small" checked={cleanBackup} onChange={(e) => setCleanBackup(e.target.checked)} />}
-            label={<Box><Typography variant="body2">清理备份文件</Typography><Typography variant="caption" color="text.secondary">预计释放：约 2.3 GB</Typography></Box>} />
+            label={<Box><Typography variant="body2">清理备份文件</Typography><Typography variant="caption" color="text.secondary">预计释放：{formatSize(2300)}</Typography></Box>} />
           <FormControlLabel control={<Checkbox size="small" checked={cleanCache} onChange={(e) => setCleanCache(e.target.checked)} />}
-            label={<Box><Typography variant="body2">清理缓存文件</Typography><Typography variant="caption" color="text.secondary">预计释放：约 1.1 GB</Typography></Box>} />
+            label={<Box><Typography variant="body2">清理缓存文件</Typography><Typography variant="caption" color="text.secondary">预计释放：{formatSize(1100)}</Typography></Box>} />
           <FormControlLabel control={<Checkbox size="small" checked={cleanLog} onChange={(e) => setCleanLog(e.target.checked)} />}
-            label={<Box><Typography variant="body2">清理日志文件</Typography><Typography variant="caption" color="text.secondary">预计释放：约 512 MB</Typography></Box>} />
+            label={<Box><Typography variant="body2">清理日志文件</Typography><Typography variant="caption" color="text.secondary">预计释放：{formatSize(512)}</Typography></Box>} />
         </Box>
       </Box>
 
@@ -447,7 +447,7 @@ function FileMigrationPanel() {
       <Box className="flex items-center gap-3 mb-4">
         <Button variant="outlined" size="small" startIcon={<Preview />} disabled={selectedDevices.length === 0}>预览</Button>
         <Button variant="contained" size="small" startIcon={<FolderOpen />}
-          disabled={selectedDevices.length === 0 || isRunning} onClick={handleExecute}>
+          disabled={selectedDevices.length === 0 || isRunning || !Object.values(types).some(Boolean)} onClick={handleExecute}>
           {isRunning ? '迁移中...' : '开始迁移'}
         </Button>
         {isRunning && <LinearProgress sx={{ flex: 1, maxWidth: 200 }} />}
