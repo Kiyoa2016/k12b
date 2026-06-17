@@ -557,6 +557,138 @@ function DiskFormatPanel() {
   );
 }
 
+// ─── Tab 4: 音频转文字 ───
+function AudioTranscribePanel() {
+  const [videoFile, setVideoFile] = useState<{ name: string; size: string } | null>(null);
+  const [transcribeStatus, setTranscribeStatus] = useState<'idle' | 'processing' | 'done'>('idle');
+  const [segments, setSegments] = useState<TranscriptSegment[]>([]);
+
+  const handleFileSelect = () => {
+    setVideoFile({ name: '数学课_函数讲解.mp4', size: '156 MB' });
+    setTranscribeStatus('idle');
+    setSegments([]);
+  };
+
+  const handleTranscribe = () => {
+    if (!videoFile) return;
+    setTranscribeStatus('processing');
+    setTimeout(() => {
+      setSegments([
+        { id: 'seg-1', startTime: 0, endTime: 15, text: '今天我们来讲解数学函数的基本概念', deleted: false },
+        { id: 'seg-2', startTime: 15, endTime: 32, text: '函数的定义域是指所有可能的输入值的集合', deleted: false },
+        { id: 'seg-3', startTime: 32, endTime: 48, text: '接下来我们看一下具体的例题', deleted: false },
+        { id: 'seg-4', startTime: 48, endTime: 65, text: '这个例题展示了如何求解函数的定义域', deleted: false },
+        { id: 'seg-5', startTime: 65, endTime: 80, text: '我们需要注意定义域的几种特殊情况', deleted: false },
+        { id: 'seg-6', startTime: 80, endTime: 95, text: '定义域不能包含使函数无意义的取值', deleted: false },
+        { id: 'seg-7', startTime: 95, endTime: 110, text: '比如分母不能为零，根号下不能为负数', deleted: false },
+      ]);
+      setTranscribeStatus('done');
+    }, 2000);
+  };
+
+  const handleToggleDelete = (id: string) => {
+    setSegments((prev) => prev.map((s) => s.id === id ? { ...s, deleted: !s.deleted } : s));
+  };
+
+  const handleTextChange = (id: string, text: string) => {
+    setSegments((prev) => prev.map((s) => s.id === id ? { ...s, text } : s));
+  };
+
+  const handleConfirmDelete = () => {
+    setSegments((prev) => prev.filter((s) => !s.deleted));
+  };
+
+  const markedCount = segments.filter((s) => s.deleted).length;
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  return (
+    <Box>
+      <Box className="mb-4">
+        <Typography variant="body2" className="font-medium mb-2">选择视频文件</Typography>
+        <Box className="flex items-center gap-3">
+          <Button variant="outlined" size="small" startIcon={<Upload />} onClick={handleFileSelect}>
+            选择视频
+          </Button>
+          <Button variant="outlined" size="small" startIcon={<VideoFile />}
+            onClick={() => { setVideoFile(null); setTranscribeStatus('idle'); setSegments([]); }}
+            disabled={!videoFile}>
+            重新选择
+          </Button>
+          {videoFile && (
+            <Box className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg">
+              <VideoFile sx={{ fontSize: 18, color: '#3b82f6' }} />
+              <Typography variant="body2">{videoFile.name}</Typography>
+              <Typography variant="caption" color="text.secondary">({videoFile.size})</Typography>
+            </Box>
+          )}
+        </Box>
+      </Box>
+
+      {videoFile && (
+        <Box className="mb-4 p-6 bg-gray-900 rounded-lg text-white text-center">
+          <Box sx={{ fontSize: 48, mb: 1, opacity: 0.7 }}>▶</Box>
+          <Typography variant="body2">{videoFile.name}</Typography>
+          <Typography variant="caption" color="text.secondary">模拟视频播放器区域</Typography>
+        </Box>
+      )}
+
+      {videoFile && transcribeStatus !== 'done' && (
+        <Box className="mb-4">
+          <Button variant="contained" startIcon={<Mic />}
+            onClick={handleTranscribe} disabled={transcribeStatus === 'processing'}>
+            {transcribeStatus === 'processing' ? '正在提取转写...' : '提取音频并转文字'}
+          </Button>
+          {transcribeStatus === 'processing' && <LinearProgress className="mt-2" />}
+        </Box>
+      )}
+
+      {transcribeStatus === 'done' && segments.length > 0 && (
+        <Box>
+          <Box className="flex items-center justify-between mb-3">
+            <Typography variant="subtitle2" className="font-bold">转写结果</Typography>
+            <Box className="flex gap-2">
+              {markedCount > 0 && (
+                <Button variant="contained" size="small" color="error" onClick={handleConfirmDelete}>
+                  确认删除片段 ({markedCount})
+                </Button>
+              )}
+              <Button variant="outlined" size="small" startIcon={<Download />}>导出文字</Button>
+            </Box>
+          </Box>
+          <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+            {segments.map((seg) => (
+              <Box key={seg.id}
+                className={`flex items-start gap-3 p-3 border-b border-gray-100 last:border-b-0 transition-colors ${seg.deleted ? 'bg-red-50 line-through opacity-60' : 'hover:bg-gray-50'}`}
+              >
+                <Typography variant="caption" className="font-mono text-gray-500 min-w-[70px] pt-1">
+                  {formatTime(seg.startTime)} - {formatTime(seg.endTime)}
+                </Typography>
+                <TextField
+                  size="small" variant="standard" fullWidth multiline
+                  value={seg.text}
+                  onChange={(e) => handleTextChange(seg.id, e.target.value)}
+                  sx={{ '& .MuiInput-root:before': { borderBottom: 'none' } }}
+                  disabled={seg.deleted}
+                />
+                <Tooltip title={seg.deleted ? '撤销删除' : '标记删除'}>
+                  <IconButton size="small" onClick={() => handleToggleDelete(seg.id)}
+                    color={seg.deleted ? 'primary' : 'default'}>
+                    {seg.deleted ? <CheckCircle fontSize="small" /> : <Close fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ))}
+          </Paper>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 // ===== 占位导出 =====
 export default function SecurityPolicy() {
   return <Box>待实现</Box>;
