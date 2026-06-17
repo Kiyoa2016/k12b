@@ -515,6 +515,139 @@ function CreatePlanDialog({
   );
 }
 
+// ─── 辅助组件 ───
+function StatusChip({ status }: { status: BroadcastStatus }) {
+  const map: Record<BroadcastStatus, { label: string; bg: string; color: string }> = {
+    running: { label: '运行中', bg: '#dcfce7', color: '#16a34a' },
+    pending: { label: '待执行', bg: '#fef9c3', color: '#ca8a04' },
+    stopped: { label: '已停止', bg: '#f3f4f6', color: '#6b7280' },
+    error: { label: '异常', bg: '#fee2e2', color: '#dc2626' },
+  };
+  const m = map[status];
+  return <Chip label={m.label} size="small" sx={{ backgroundColor: m.bg, color: m.color, fontWeight: 600, height: 22, fontSize: 11 }} />;
+}
+
+function ExecStatusChip({ status }: { status: ExecStatus }) {
+  const map: Record<ExecStatus, { label: string; bg: string; color: string }> = {
+    success: { label: '成功', bg: '#dcfce7', color: '#16a34a' },
+    failed: { label: '失败', bg: '#fee2e2', color: '#dc2626' },
+    running: { label: '执行中', bg: '#dbeafe', color: '#2563eb' },
+  };
+  const m = map[status];
+  return <Chip label={m.label} size="small" sx={{ backgroundColor: m.bg, color: m.color, fontWeight: 600, height: 22, fontSize: 11 }} />;
+}
+
+function getCycleLabel(plan: BroadcastPlan): string {
+  if (plan.cycleMode === 'immediate') return '⏺ 立即执行';
+  const start = formatDateTime(plan.startTime);
+  const end = formatDateTime(plan.endTime);
+  if (plan.cycleMode === 'weekly') {
+    const days = (plan.weekDays || []).map((d) => WEEKDAY_LABELS[d]).join('、');
+    if (days) return `🔄 每周 ${days} ${start}-${end}`;
+    return `🔄 每周 ${start}-${end}`;
+  }
+  return `📅 ${start}-${end}`;
+}
+
+// ─── 计划详情弹窗 ───
+function PlanDetailDialog({
+  plan, open, onClose, histories,
+}: {
+  plan: BroadcastPlan | null;
+  open: boolean;
+  onClose: () => void;
+  histories: BroadcastHistory[];
+}) {
+  if (!plan) return null;
+
+  const planHistories = histories.filter((h) => h.planId === plan.id);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb', pb: 2 }}>
+        <Box className="flex items-center justify-between">
+          <Box className="flex items-center gap-2">
+            <Computer className="text-blue-600" />
+            <Typography variant="h6">{plan.name}</Typography>
+            <StatusChip status={plan.status} />
+          </Box>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '16px !important' }}>
+        {/* 基本信息 */}
+        <Typography variant="subtitle2" className="font-bold mb-3">基本信息</Typography>
+        <Box className="grid grid-cols-2 gap-x-6 gap-y-3 mb-6">
+          <Box>
+            <Typography variant="caption" color="text.secondary">转播方式</Typography>
+            <Typography variant="body2" className="font-medium">
+              {plan.method === 'webpage' ? '🌐 新闻网页' : '🎬 视频文件'}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">内容地址</Typography>
+            <Typography variant="body2" className="font-medium" sx={{ wordBreak: 'break-all' }}>{plan.contentUrl}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">循环模式</Typography>
+            <Typography variant="body2" className="font-medium">{getCycleLabel(plan)}</Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">目标设备</Typography>
+            <Typography variant="body2" className="font-medium">{plan.deviceIds.length} 台</Typography>
+          </Box>
+          <Box>
+            <Typography variant="caption" color="text.secondary">创建时间</Typography>
+            <Typography variant="body2" className="font-medium">{new Date(plan.createdAt).toLocaleString('zh-CN')}</Typography>
+          </Box>
+        </Box>
+
+        {/* 关联设备 */}
+        <Typography variant="subtitle2" className="font-bold mb-3">关联设备</Typography>
+        <Box className="flex flex-wrap gap-2 mb-6">
+          {plan.deviceIds.map((id) => (
+            <Chip key={id} label={DEVICE_NAMES[parseInt(id) % DEVICE_NAMES.length]}
+              size="small" icon={<Computer />} variant="outlined" />
+          ))}
+        </Box>
+
+        {/* 执行历史 */}
+        <Typography variant="subtitle2" className="font-bold mb-3">执行历史</Typography>
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f9fafb' }}>
+                <TableCell sx={{ fontWeight: 600 }}>时间</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>设备</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: 80 }}>状态</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>信息</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {planHistories.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">暂无执行记录</Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                planHistories.map((h) => (
+                  <TableRow key={h.id}>
+                    <TableCell><Typography variant="caption">{formatDateTime(h.startTime)}</Typography></TableCell>
+                    <TableCell><Typography variant="body2">{h.deviceName}</Typography></TableCell>
+                    <TableCell><ExecStatusChip status={h.status} /></TableCell>
+                    <TableCell><Typography variant="caption" color="text.secondary">{h.errorMsg || '-'}</Typography></TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ===== 占位导出 =====
 export default function NewsBroadcast() {
   return <Box>待实现</Box>;
