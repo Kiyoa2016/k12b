@@ -6,12 +6,12 @@ import {
   Tabs, Tab, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TablePagination,
   Select, MenuItem, FormControl,
-  Paper,
+  Paper, Tooltip,
 } from '@mui/material';
 import {
   Devices, CheckCircle, Cancel, Download, Settings,
   Search, Computer, Router, Security, Speed,
-  MonitorHeart, BarChart, Timeline, Close,
+  MonitorHeart, BarChart, Timeline, Close, HelpOutline,
 } from '@mui/icons-material';
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis,
@@ -763,6 +763,160 @@ function exportToCSV(devices: Device[], filename: string) {
   URL.revokeObjectURL(url);
 }
 
+// ─── 页面说明浮窗 ───
+function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb' }}>
+        <Box className="flex items-center justify-between">
+          <Box className="flex items-center gap-2">
+            <HelpOutline className="text-blue-600" />
+            <Typography variant="h6">集控总览 — 页面说明</Typography>
+          </Box>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '16px !important' }}>
+        <Box className="space-y-6 text-sm">
+
+          {/* ── 指标计算规则 ── */}
+          <section>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">📊 指标计算规则</Typography>
+            <Box className="bg-blue-50 rounded-lg p-4 space-y-2">
+              <MetricRule label="监管设备数" rule="系统管理所有教室终端设备的总数量，合计 17 台。" />
+              <MetricRule label="设备使用率" rule="最近 7 天有活跃记录的设备数 ÷ 总设备数 × 100%。活跃记录指设备在 7 天内有在线状态变更或心跳上报。" />
+              <MetricRule label="网络达标率" rule="网络连接状态正常的设备数 ÷ 总设备数 × 100%。基于设备上次上报的网络连通性检测结果。" />
+              <MetricRule label="硬件达标率" rule="CPU 使用率 ≤ 80%、CPU 温度 ≤ 75°C、内存大小 ≥ 4GB、内存使用率 ≤ 80%、系统盘使用率 ≤ 85%、数据盘使用率 ≤ 85% 且外设（音响/麦克风/摄像头）全部正常的设备数 ÷ 总设备数 × 100%。" />
+              <MetricRule label="流畅度达标率" rule="系统资源占用在合理范围内的设备数 ÷ 总设备数 × 100%。反映设备运行流畅程度。" />
+              <MetricRule label="安全达标率" rule="系统补丁、杀毒软件、防火墙、违规软件检测、USB 管控五项安全检查全部通过的设备数 ÷ 总设备数 × 100%。" />
+            </Box>
+          </section>
+
+          {/* ── 达标颜色规则 ── */}
+          <section>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">🎨 达标颜色规则</Typography>
+            <Box className="bg-gray-50 rounded-lg p-4">
+              <Box className="grid grid-cols-3 gap-4">
+                <Box className="text-center p-3 bg-white rounded-lg border border-green-200">
+                  <Box className="w-6 h-6 rounded-full bg-green-500 mx-auto mb-1" />
+                  <Typography variant="body2" className="font-medium">≥ 阈值</Typography>
+                  <Typography variant="caption" color="text.secondary">达标，显示绿色</Typography>
+                </Box>
+                <Box className="text-center p-3 bg-white rounded-lg border border-yellow-200">
+                  <Box className="w-6 h-6 rounded-full bg-yellow-500 mx-auto mb-1" />
+                  <Typography variant="body2" className="font-medium">≥ 阈值 × 90%</Typography>
+                  <Typography variant="caption" color="text.secondary">临界，显示黄色</Typography>
+                </Box>
+                <Box className="text-center p-3 bg-white rounded-lg border border-red-200">
+                  <Box className="w-6 h-6 rounded-full bg-red-500 mx-auto mb-1" />
+                  <Typography variant="body2" className="font-medium">&lt; 阈值 × 90%</Typography>
+                  <Typography variant="caption" color="text.secondary">不达标，显示红色</Typography>
+                </Box>
+              </Box>
+            </Box>
+          </section>
+
+          {/* ── 阈值默认值 ── */}
+          <section>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">⚙️ 阈值默认值与设置</Typography>
+            <Box className="bg-gray-50 rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="text-left p-2 font-medium">指标</th>
+                    <th className="text-left p-2 font-medium">默认阈值</th>
+                    <th className="text-left p-2 font-medium">说明</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[
+                    ['设备使用率', '60%', '低于此值视为使用率偏低'],
+                    ['网络达标率', '90%', '低于此值标记为网络不达标'],
+                    ['硬件达标率', '90%', '低于此值标记为硬件不达标'],
+                    ['流畅度达标率', '85%', '低于此值标记为流畅度不达标'],
+                    ['安全达标率', '95%', '低于此值标记为安全不达标'],
+                  ].map(([label, def, desc]) => (
+                    <tr key={label} className="border-t border-gray-200">
+                      <td className="p-2 font-medium">{label}</td>
+                      <td className="p-2">{def}</td>
+                      <td className="p-2 text-gray-500">{desc}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Box>
+            <Typography variant="caption" color="text.secondary" className="mt-1 block">
+              阈值可在页面顶部的「阈值设置」弹窗中自定义修改，修改后实时生效并自动保存至浏览器本地存储。
+            </Typography>
+          </section>
+
+          {/* ── 状态说明 ── */}
+          <section>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">💡 设备状态说明</Typography>
+            <Box className="bg-gray-50 rounded-lg p-4 space-y-2">
+              <Box className="flex items-center gap-3">
+                <Chip label="在线" size="small" sx={{ backgroundColor: '#dcfce7', color: '#16a34a', fontWeight: 600 }} />
+                <Typography variant="body2">设备正常运行，与服务器保持连接，可远程管理和控制。</Typography>
+              </Box>
+              <Box className="flex items-center gap-3">
+                <Chip label="离线" size="small" sx={{ backgroundColor: '#f3f4f6', color: '#6b7280', fontWeight: 600 }} />
+                <Typography variant="body2">设备未连接到网络或已关机，无法进行远程操作。</Typography>
+              </Box>
+              <Box className="flex items-center gap-3">
+                <Chip label="异常" size="small" sx={{ backgroundColor: '#fee2e2', color: '#dc2626', fontWeight: 600 }} />
+                <Typography variant="body2">设备在线但存在异常状态（如 CPU 过热、磁盘空间不足等），需及时处理。</Typography>
+              </Box>
+            </Box>
+          </section>
+
+          {/* ── 设备详情 Tab 说明 ── */}
+          <section>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">📋 设备详情 Tab 说明</Typography>
+            <Box className="bg-gray-50 rounded-lg p-4 space-y-2">
+              {[
+                ['设备信息', '展示设备基础信息（名称、编号、位置、状态）和网络详情（上下行网速、流量统计）。'],
+                ['硬件参数', '展示 15 项硬件指标（CPU 型号/使用率/温度、内存大小/使用率、系统盘/数据盘容量/使用率、操作系统、分辨率、触摸屏、音响、麦克风、摄像头），每项标注达标状态。'],
+                ['安全情况', '展示系统补丁、杀毒软件、防火墙、违规软件、USB 管控 5 项安全检查结果，并给出整体安全达标结论。'],
+                ['使用分析', '展示设备使用时间段分布柱状图、软件使用时长排行、软件使用列表、老师使用情况。'],
+                ['异常记录', '展示设备异常历史记录，包含时间、异常类型、描述和处理状态（已恢复/处理中/未恢复）。'],
+              ].map(([tab, desc]) => (
+                <Box key={tab} className="flex items-start gap-2">
+                  <Typography variant="body2" className="font-medium min-w-[72px]">{tab}：</Typography>
+                  <Typography variant="body2" color="text.secondary">{desc}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </section>
+
+          {/* ── 数据说明 ── */}
+          <section>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">ℹ️ 数据说明</Typography>
+            <Box className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-1">
+              <Typography variant="body2">• 当前页面所有数据均为前端模拟数据（Mock），刷新页面后数据会随机变化。</Typography>
+              <Typography variant="body2">• 阈值设置数据保存于浏览器 localStorage（key: <code className="text-blue-600">central-overview-thresholds</code>）。</Typography>
+              <Typography variant="body2">• 导出 CSV 功能导出当前设备列表全部数据，包含所有 13 列字段。</Typography>
+              <Typography variant="body2">• 页面为纯前端演示，不涉及真实后端 API 调用。</Typography>
+            </Box>
+          </section>
+
+        </Box>
+      </DialogContent>
+      <DialogActions className="px-6 pb-4">
+        <Button onClick={onClose} variant="contained">我知道了</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function MetricRule({ label, rule }: { label: string; rule: string }) {
+  return (
+    <Box className="flex items-start gap-2">
+      <Typography variant="body2" className="font-medium min-w-[88px] shrink-0">{label}：</Typography>
+      <Typography variant="body2" color="text.secondary">{rule}</Typography>
+    </Box>
+  );
+}
+
 export default function CentralOverview() {
   const [devices] = useState<Device[]>(generateDevices);
   const [thresholds, setThresholds] = useState<Thresholds>(getDefaultThresholds);
@@ -774,6 +928,7 @@ export default function CentralOverview() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [detailDevice, setDetailDevice] = useState<Device | null>(null);
   const [detailTab, setDetailTab] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
 
   const stats = useMemo(() => computeOverviewStats(devices, thresholds), [devices, thresholds]);
 
@@ -1047,6 +1202,26 @@ export default function CentralOverview() {
           tab={detailTab}
           onTabChange={setDetailTab}
         />
+
+        {/* 浮窗帮助按钮 */}
+        <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1000 }}>
+          <Tooltip title="页面说明" placement="left">
+            <IconButton
+              onClick={() => setHelpOpen(true)}
+              sx={{
+                width: 48, height: 48,
+                backgroundColor: '#3b82f6',
+                color: '#fff',
+                boxShadow: '0 4px 12px rgba(59,130,246,0.4)',
+                '&:hover': { backgroundColor: '#2563eb' },
+              }}
+            >
+              <HelpOutline />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <HelpDialog open={helpOpen} onClose={() => setHelpOpen(false)} />
       </Box>
     </Box>
   );
