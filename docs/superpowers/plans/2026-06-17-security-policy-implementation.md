@@ -1,3 +1,25 @@
+# 安全策略功能实现计划
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 重写 SecurityPolicy.tsx 为包含磁盘清理、文件迁移、磁盘格式化、音频转文字 4 个 Tab 的安全策略管理页面
+
+**Architecture:** 单文件组件（遵循现有代码模式），内联子组件和 mock 数据，4 个 Tab 共用设备选择器
+
+**Tech Stack:** React 18 + TypeScript + MUI v7 + Tailwind CSS 4
+
+**设计文档:** `docs/superpowers/specs/2026-06-17-security-policy-design.md`
+
+---
+
+### Task 1: 类型定义、mock 数据和组件骨架
+
+**Files:**
+- Rewrite: `src/app/components/SecurityPolicy.tsx`
+
+- [ ] **Step 1: 替换全部内容，添加导入、类型定义和组件骨架**
+
+```typescript
 import { useState, useMemo } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, IconButton,
@@ -27,19 +49,23 @@ interface DeviceActionResult {
   detail?: string;
 }
 
+// 磁盘清理
 interface CleanupResult extends DeviceActionResult {
   beforeSpace?: string;
   afterSpace?: string;
   freedSpace?: string;
 }
 
+// 文件迁移
 interface MigrationResult extends DeviceActionResult {
   fileCount?: number;
   dataSize?: string;
 }
 
+// 格式化
 interface FormatResult extends DeviceActionResult {}
 
+// 音频转文字
 interface TranscriptSegment {
   id: string;
   startTime: number;
@@ -68,7 +94,12 @@ function formatSize(mb: number): string {
   return `${mb} MB`;
 }
 
-// ─── 结果表格组件 ───
+function addMinutes(date: Date, minutes: number): string {
+  const d = new Date(date.getTime() + minutes * 60000);
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
+// ─── 辅助组件 ───
 
 function CleanupResultTable({ results }: { results: CleanupResult[] }) {
   if (results.length === 0) return null;
@@ -191,6 +222,33 @@ function FormatResultTable({ results }: { results: FormatResult[] }) {
   );
 }
 
+// ===== 占位导出 =====
+export default function SecurityPolicy() {
+  return <Box>待实现</Box>;
+}
+```
+
+- [ ] **Step 2: 编译检查**
+
+Run: `npx vite build 2>&1 | tail -5`
+Expected: Build succeeds
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/app/components/SecurityPolicy.tsx
+git commit -m "feat(security-policy): add types, mock data, result table components"
+```
+
+---
+
+### Task 2: 设备选择器和 Tab 1（磁盘清理）
+
+- [ ] **Step 1: 添加 DeviceSelector 组件和 Tab1 Panel**
+
+在 result table 组件之后、占位导出之前插入：
+
+```typescript
 // ─── 设备选择器 ───
 function DeviceSelector({
   selected, onChange, allDevices,
@@ -272,15 +330,19 @@ function DiskCleanupPanel() {
 
   const estimatedFreed = useMemo(() => {
     let total = 0;
-    if (cleanBackup) total += 2300;
-    if (cleanCache) total += 1100;
-    if (cleanLog) total += 512;
+    if (cleanBackup) total += rand(1500, 3000);
+    if (cleanCache) total += rand(500, 1500);
+    if (cleanLog) total += rand(200, 800);
     customPaths.forEach(() => { total += rand(100, 500); });
     return total;
   }, [cleanBackup, cleanCache, cleanLog, customPaths.length]);
 
   const handleAddPath = () => {
     if (newPath.trim()) { setCustomPaths((p) => [...p, newPath.trim()]); setNewPath(''); }
+  };
+
+  const handleRemovePath = (idx: number) => {
+    setCustomPaths((p) => p.filter((_, i) => i !== idx));
   };
 
   const handleExecute = () => {
@@ -291,6 +353,7 @@ function DiskCleanupPanel() {
       status: 'running' as const, beforeSpace: '120 GB',
     }));
     setResults(initial);
+    // 模拟异步执行
     setTimeout(() => {
       setResults(initial.map((r) => ({
         ...r,
@@ -335,7 +398,7 @@ function DiskCleanupPanel() {
       <Box className="mb-4">
         <Typography variant="body2" className="font-medium mb-2">自定义文件夹</Typography>
         <Box className="flex gap-2 mb-2">
-          <TextField size="small" placeholder="输入文件夹路径，如 C:\Temp" value={newPath}
+          <TextField size="small" placeholder="输入文件夹路径" value={newPath}
             onChange={(e) => setNewPath(e.target.value)} sx={{ flex: 1 }}
             onKeyDown={(e) => e.key === 'Enter' && handleAddPath()} />
           <Button variant="outlined" size="small" onClick={handleAddPath}>添加路径</Button>
@@ -344,7 +407,7 @@ function DiskCleanupPanel() {
           <Box key={i} className="flex items-center gap-2 mb-1 px-2 py-1 bg-gray-50 rounded">
             <FolderOpen sx={{ fontSize: 16, color: '#6b7280' }} />
             <Typography variant="body2" className="flex-1">{path}</Typography>
-            <IconButton size="small" onClick={() => setCustomPaths((p) => p.filter((_, j) => j !== i))}><Close fontSize="small" /></IconButton>
+            <IconButton size="small" onClick={() => handleRemovePath(i)}><Close fontSize="small" /></IconButton>
           </Box>
         ))}
       </Box>
@@ -368,7 +431,33 @@ function DiskCleanupPanel() {
     </Box>
   );
 }
+```
 
+- [ ] **Step 2: 添加 `formatSize` 和 `addMinutes`（如果还没加）**
+
+确保 `formatSize` 和 `addMinutes` 函数在 mock 数据部分已经定义。
+
+- [ ] **Step 3: 编译检查**
+
+Run: `npx vite build 2>&1 | tail -5`
+Expected: Build succeeds
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/app/components/SecurityPolicy.tsx
+git commit -m "feat(security-policy): add device selector and disk cleanup tab"
+```
+
+---
+
+### Task 3: Tab 2（文件迁移）和 Tab 3（磁盘格式化）
+
+- [ ] **Step 1: 添加 FileMigrationPanel 和 DiskFormatPanel**
+
+在 DiskCleanupPanel 之后插入：
+
+```typescript
 // ─── Tab 2: 文件迁移 ───
 function FileMigrationPanel() {
   const allDevices = DEVICE_NAMES;
@@ -399,6 +488,7 @@ function FileMigrationPanel() {
       setResults(initial.map((r) => ({
         ...r, status: (Math.random() > 0.1 ? 'success' : 'failed') as 'success' | 'failed',
         fileCount: rand(50, 300), dataSize: formatSize(rand(500, 3000)),
+        detail: Math.random() > 0.1 ? undefined : '磁盘空间不足',
       })));
       setIsRunning(false);
     }, 2000);
@@ -495,9 +585,7 @@ function DiskFormatPanel() {
       <DeviceSelector selected={selectedDevices} onChange={setSelectedDevices} allDevices={allDevices} />
 
       <Box className="mb-4">
-        <Typography variant="body2" className="font-medium mb-2">
-          目标磁盘 <Typography variant="caption" color="warning">（仅显示非系统盘）</Typography>
-        </Typography>
+        <Typography variant="body2" className="font-medium mb-2">目标磁盘 <Typography variant="caption" color="text.warning">（仅显示非系统盘）</Typography></Typography>
         <Box className="flex gap-2 items-center mb-3">
           {DISK_LABELS.filter((d) => d !== 'C:').map((disk) => (
             <Chip key={disk} label={`${disk}\\`}
@@ -556,8 +644,257 @@ function DiskFormatPanel() {
     </Box>
   );
 }
+```
 
-// ===== 占位导出 =====
-export default function SecurityPolicy() {
-  return <Box>待实现</Box>;
+- [ ] **Step 2: 编译检查**
+
+Run: `npx vite build 2>&1 | tail -5`
+Expected: Build succeeds
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/app/components/SecurityPolicy.tsx
+git commit -m "feat(security-policy): add file migration and disk format tabs"
+```
+
+---
+
+### Task 4: Tab 4（音频转文字）
+
+- [ ] **Step 1: 添加 AudioTranscribePanel**
+
+在 DiskFormatPanel 之后插入：
+
+```typescript
+// ─── Tab 4: 音频转文字 ───
+function AudioTranscribePanel() {
+  const [videoFile, setVideoFile] = useState<{ name: string; size: string } | null>(null);
+  const [transcribeStatus, setTranscribeStatus] = useState<'idle' | 'processing' | 'done'>('idle');
+  const [segments, setSegments] = useState<TranscriptSegment[]>([]);
+
+  const handleFileSelect = () => {
+    // Mock：模拟选择视频文件
+    setVideoFile({ name: '数学课_函数讲解.mp4', size: '156 MB' });
+    setTranscribeStatus('idle');
+    setSegments([]);
+  };
+
+  const handleTranscribe = () => {
+    if (!videoFile) return;
+    setTranscribeStatus('processing');
+    setTimeout(() => {
+      setSegments([
+        { id: 'seg-1', startTime: 0, endTime: 15, text: '今天我们来讲解数学函数的基本概念', deleted: false },
+        { id: 'seg-2', startTime: 15, endTime: 32, text: '函数的定义域是指所有可能的输入值的集合', deleted: false },
+        { id: 'seg-3', startTime: 32, endTime: 48, text: '接下来我们看一下具体的例题', deleted: false },
+        { id: 'seg-4', startTime: 48, endTime: 65, text: '这个例题展示了如何求解函数的定义域', deleted: false },
+        { id: 'seg-5', startTime: 65, endTime: 80, text: '我们需要注意定义域的几种特殊情况', deleted: false },
+        { id: 'seg-6', startTime: 80, endTime: 95, text: '定义域不能包含使函数无意义的取值', deleted: false },
+        { id: 'seg-7', startTime: 95, endTime: 110, text: '比如分母不能为零，根号下不能为负数', deleted: false },
+      ]);
+      setTranscribeStatus('done');
+    }, 2000);
+  };
+
+  const handleToggleDelete = (id: string) => {
+    setSegments((prev) => prev.map((s) => s.id === id ? { ...s, deleted: !s.deleted } : s));
+  };
+
+  const handleTextChange = (id: string, text: string) => {
+    setSegments((prev) => prev.map((s) => s.id === id ? { ...s, text } : s));
+  };
+
+  const handleConfirmDelete = () => {
+    setSegments((prev) => prev.filter((s) => !s.deleted));
+  };
+
+  const markedCount = segments.filter((s) => s.deleted).length;
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  return (
+    <Box>
+      <Box className="mb-4">
+        <Typography variant="body2" className="font-medium mb-2">选择视频文件</Typography>
+        <Box className="flex items-center gap-3">
+          <Button variant="outlined" size="small" startIcon={<Upload />} onClick={handleFileSelect}>
+            选择视频
+          </Button>
+          <Button variant="outlined" size="small" startIcon={<VideoFile />}
+            onClick={() => setVideoFile(null)} disabled={!videoFile}>
+            重新选择
+          </Button>
+          {videoFile && (
+            <Box className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg">
+              <VideoFile sx={{ fontSize: 18, color: '#3b82f6' }} />
+              <Typography variant="body2">{videoFile.name}</Typography>
+              <Typography variant="caption" color="text.secondary">({videoFile.size})</Typography>
+            </Box>
+          )}
+        </Box>
+      </Box>
+
+      {/* 播放器预览区域 */}
+      {videoFile && (
+        <Box className="mb-4 p-6 bg-gray-900 rounded-lg text-white text-center">
+          <Box sx={{ fontSize: 48, mb: 1 }}>▶</Box>
+          <Typography variant="body2">{videoFile.name}</Typography>
+          <Typography variant="caption" color="text.secondary">模拟视频播放器区域</Typography>
+        </Box>
+      )}
+
+      {/* 转写操作 */}
+      {videoFile && transcribeStatus !== 'done' && (
+        <Box className="mb-4">
+          <Button variant="contained" startIcon={<Mic />}
+            onClick={handleTranscribe} disabled={transcribeStatus === 'processing'}>
+            {transcribeStatus === 'processing' ? '正在提取转写...' : '提取音频并转文字'}
+          </Button>
+          {transcribeStatus === 'processing' && <LinearProgress className="mt-2" />}
+        </Box>
+      )}
+
+      {/* 转写结果 */}
+      {transcribeStatus === 'done' && segments.length > 0 && (
+        <Box>
+          <Box className="flex items-center justify-between mb-3">
+            <Typography variant="subtitle2" className="font-bold">转写结果</Typography>
+            <Box className="flex gap-2">
+              {markedCount > 0 && (
+                <Button variant="contained" size="small" color="error" onClick={handleConfirmDelete}>
+                  确认删除片段 ({markedCount})
+                </Button>
+              )}
+              <Button variant="outlined" size="small" startIcon={<Download />}>导出文字</Button>
+            </Box>
+          </Box>
+          <Paper variant="outlined" sx={{ borderRadius: 2 }}>
+            {segments.map((seg) => (
+              <Box key={seg.id}
+                className={`flex items-start gap-3 p-3 border-b border-gray-100 last:border-b-0 transition-colors ${seg.deleted ? 'bg-red-50 line-through opacity-60' : 'hover:bg-gray-50'}`}
+              >
+                <Typography variant="caption" className="font-mono text-gray-500 min-w-[60px] pt-1">
+                  {formatTime(seg.startTime)} - {formatTime(seg.endTime)}
+                </Typography>
+                <TextField
+                  size="small" variant="standard" fullWidth multiline
+                  value={seg.text}
+                  onChange={(e) => handleTextChange(seg.id, e.target.value)}
+                  sx={{ '& .MuiInput-root:before': { borderBottom: 'none' } }}
+                  disabled={seg.deleted}
+                />
+                <Tooltip title={seg.deleted ? '撤销删除' : '标记删除'}>
+                  <IconButton size="small" onClick={() => handleToggleDelete(seg.id)}
+                    color={seg.deleted ? 'primary' : 'default'}>
+                    {seg.deleted ? <CheckCircle fontSize="small" /> : <Close fontSize="small" />}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            ))}
+          </Paper>
+        </Box>
+      )}
+    </Box>
+  );
 }
+```
+
+- [ ] **Step 2: 编译检查**
+
+Run: `npx vite build 2>&1 | tail -5`
+Expected: Build succeeds
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add src/app/components/SecurityPolicy.tsx
+git commit -m "feat(security-policy): add audio transcribe tab with segment editing"
+```
+
+---
+
+### Task 5: 主组件（Tab 切换框架）+ permissions.ts
+
+- [ ] **Step 1: 替换占位导出为完整主组件**
+
+```typescript
+export default function SecurityPolicy() {
+  const [tab, setTab] = useState(0);
+
+  return (
+    <Box className="overflow-auto h-[calc(100vh-64px)] bg-gray-50">
+      <Box className="p-4 sm:p-6">
+        <Box className="mb-6">
+          <Typography variant="h5" className="font-bold">🔒 安全策略</Typography>
+          <Typography variant="body2" color="text.secondary" className="mt-1">
+            配置和管理教室终端的安全策略与维护操作
+          </Typography>
+        </Box>
+
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
+          <Tab label="🧹 磁盘清理" />
+          <Tab label="📂 文件迁移" />
+          <Tab label="⚠️ 磁盘格式化" />
+          <Tab label="🎙️ 音频转文字" />
+        </Tabs>
+
+        {tab === 0 && <DiskCleanupPanel />}
+        {tab === 1 && <FileMigrationPanel />}
+        {tab === 2 && <DiskFormatPanel />}
+        {tab === 3 && <AudioTranscribePanel />}
+      </Box>
+    </Box>
+  );
+}
+```
+
+- [ ] **Step 2: 更新 permissions.ts**
+
+在 `src/app/types/permissions.ts` 的 `ALL_PAGES` 中添加：
+
+```typescript
+  {
+    key: 'security-policy',
+    label: '安全策略',
+    buttons: [
+      { key: 'cleanup', label: '磁盘清理' },
+      { key: 'migrate', label: '文件迁移' },
+      { key: 'format', label: '磁盘格式化' },
+      { key: 'transcribe', label: '音频转文字' },
+    ],
+  },
+```
+
+注意：已有的 `security-policy` 配置需替换为上面的内容（含按钮）。
+
+- [ ] **Step 3: 编译检查**
+
+Run: `npx vite build 2>&1 | tail -5`
+Expected: Build succeeds
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add src/app/components/SecurityPolicy.tsx src/app/types/permissions.ts
+git commit -m "feat(security-policy): add main component with tab navigation and permission config"
+```
+
+---
+
+### Task 6: 最终验证
+
+- [ ] **Step 1: 完整构建**
+
+Run: `npx vite build`
+Expected: Build succeeds with no errors
+
+- [ ] **Step 2: 最终提交**
+
+```bash
+git add -A
+git commit -m "chore: final build verification for security policy"
+```
