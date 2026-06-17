@@ -300,6 +300,97 @@ function computeOverviewStats(devices: Device[], thresholds: Thresholds) {
   };
 }
 
+// ─── 阈值设置弹窗 ───
+function ThresholdDialog({
+  open, onClose, thresholds, onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  thresholds: Thresholds;
+  onSave: (t: Thresholds) => void;
+}) {
+  const [local, setLocal] = useState<Thresholds>(thresholds);
+  const [prevOpen, setPrevOpen] = useState(open);
+
+  // Sync when dialog opens or thresholds change externally
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setLocal(thresholds);
+  }
+
+  const fields: { key: keyof Thresholds; label: string; desc: string }[] = [
+    { key: 'usageRate', label: '设备使用率阈值', desc: '低于此值视为使用率偏低' },
+    { key: 'networkRate', label: '网络达标率阈值', desc: '低于此值标记为网络不达标' },
+    { key: 'hardwareRate', label: '硬件达标率阈值', desc: '低于此值标记为硬件不达标' },
+    { key: 'smoothnessRate', label: '流畅度达标率阈值', desc: '低于此值标记为流畅度不达标' },
+    { key: 'securityRate', label: '安全达标率阈值', desc: '低于此值标记为安全不达标' },
+  ];
+
+  const handleChange = (key: keyof Thresholds, value: number) => {
+    setLocal((prev) => ({ ...prev, [key]: Math.max(0, Math.min(100, value)) }));
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>
+        <Box className="flex items-center gap-2">
+          <Settings className="text-blue-600" />
+          <Typography variant="h6">阈值设置</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent>
+        <Box className="py-4 flex flex-col gap-5">
+          {fields.map(({ key, label, desc }) => (
+            <Box key={key}>
+              <Box className="flex items-center justify-between mb-1">
+                <Typography variant="body2" className="font-medium">{label}</Typography>
+                <Box className="flex items-center gap-1">
+                  <IconButton
+                    size="small"
+                    onClick={() => handleChange(key, local[key] - 1)}
+                    sx={{ border: '1px solid #e0e0e0', borderRadius: 1, width: 28, height: 28 }}
+                  >
+                    <Typography variant="body2">−</Typography>
+                  </IconButton>
+                  <TextField
+                    size="small"
+                    value={local[key]}
+                    onChange={(e) => handleChange(key, parseInt(e.target.value) || 0)}
+                    sx={{ width: 70, '& input': { textAlign: 'center', fontSize: 14 } }}
+                    InputProps={{ endAdornment: <Typography variant="caption" sx={{ ml: 0.5 }}>%</Typography> }}
+                  />
+                  <IconButton
+                    size="small"
+                    onClick={() => handleChange(key, local[key] + 1)}
+                    sx={{ border: '1px solid #e0e0e0', borderRadius: 1, width: 28, height: 28 }}
+                  >
+                    <Typography variant="body2">+</Typography>
+                  </IconButton>
+                </Box>
+              </Box>
+              <Typography variant="caption" color="text.secondary">{desc}</Typography>
+            </Box>
+          ))}
+        </Box>
+      </DialogContent>
+      <DialogActions className="px-6 pb-4" sx={{ justifyContent: 'space-between' }}>
+        <Button
+          onClick={() => { setLocal(DEFAULT_THRESHOLDS); }}
+          variant="text"
+          color="inherit"
+          size="small"
+        >
+          恢复默认
+        </Button>
+        <Box className="flex gap-2">
+          <Button onClick={onClose} variant="outlined">取消</Button>
+          <Button onClick={() => { onSave(local); onClose(); }} variant="contained">保存</Button>
+        </Box>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
 export default function CentralOverview() {
   const [devices] = useState<Device[]>(generateDevices);
   const [thresholds, setThresholds] = useState<Thresholds>(getDefaultThresholds);
@@ -377,8 +468,36 @@ export default function CentralOverview() {
           ))}
         </Box>
 
-        {/* 操作栏（占位，后续Task实现） */}
-        <Box className="mb-4" />
+        {/* 操作栏 */}
+        <Box className="mb-4 flex items-center gap-3">
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Settings />}
+            onClick={() => setThresholdDialogOpen(true)}
+          >
+            阈值设置
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Download />}
+            // TODO: implement in Task 4
+          >
+            导出数据
+          </Button>
+        </Box>
+
+        {/* 阈值设置弹窗 */}
+        <ThresholdDialog
+          open={thresholdDialogOpen}
+          onClose={() => setThresholdDialogOpen(false)}
+          thresholds={thresholds}
+          onSave={(t) => {
+            setThresholds(t);
+            localStorage.setItem('central-overview-thresholds', JSON.stringify(t));
+          }}
+        />
       </Box>
     </Box>
   );
