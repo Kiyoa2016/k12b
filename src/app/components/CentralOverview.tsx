@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, IconButton,
   TextField, InputAdornment, Chip,
@@ -616,7 +616,7 @@ function computeOverviewStats(devices: Device[], thresholds: Thresholds) {
   const total = devices.length;
   const activeRecent = devices.filter((d) => {
     if (d.status === 'offline') return false;
-    return Date.now() - new Date(d.lastActive).getTime() < 86400000;
+    return Date.now() - new Date(d.lastActive).getTime() < 604800000; // 7 days
   }).length;
   const usageRate = Math.round((activeRecent / total) * 100);
   const networkRate = Math.round((devices.filter((d) => d.networkOk).length / total) * 100);
@@ -651,13 +651,10 @@ function ThresholdDialog({
   onSave: (t: Thresholds) => void;
 }) {
   const [local, setLocal] = useState<Thresholds>(thresholds);
-  const [prevOpen, setPrevOpen] = useState(open);
 
-  // Sync when dialog opens or thresholds change externally
-  if (open !== prevOpen) {
-    setPrevOpen(open);
+  useEffect(() => {
     if (open) setLocal(thresholds);
-  }
+  }, [open, thresholds]);
 
   const fields: { key: keyof Thresholds; label: string; desc: string }[] = [
     { key: 'usageRate', label: '设备使用率阈值', desc: '低于此值视为使用率偏低' },
@@ -734,13 +731,20 @@ function ThresholdDialog({
 
 // ─── 导出 CSV ───
 function exportToCSV(devices: Device[], filename: string) {
+  const escapeCSV = (s: string) => {
+    if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+      return `"${s.replace(/"/g, '""')}"`;
+    }
+    return s;
+  };
+
   const headers = [
     '设备名称', '设备编号', '位置', '状态', '最近活跃',
     '上行网速(Mbps)', '下行网速(Mbps)', '流入流量(MB)', '流出流量(MB)',
     '网络达标', '硬件达标', '流畅度达标', '安全达标',
   ];
   const rows = devices.map((d) => [
-    d.name, d.code, d.room,
+    escapeCSV(d.name), escapeCSV(d.code), escapeCSV(d.room),
     d.status === 'online' ? '在线' : d.status === 'offline' ? '离线' : '异常',
     d.lastActive,
     String(d.uploadSpeed), String(d.downloadSpeed), String(d.inboundTraffic), String(d.outboundTraffic),
@@ -1030,6 +1034,7 @@ export default function CentralOverview() {
               setRowsPerPage(parseInt(e.target.value, 10));
               setPage(0);
             }}
+            rowsPerPageOptions={[10, 20, 50]}
             labelRowsPerPage="每页："
             labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 共 ${count}`}
           />
