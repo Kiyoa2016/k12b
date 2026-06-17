@@ -224,6 +224,347 @@ function getDefaultThresholds(): Thresholds {
   return DEFAULT_THRESHOLDS;
 }
 
+// ─── InfoRow 组件 ───
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" className="block mb-0.5">{label}</Typography>
+      <Typography variant="body2" className="font-medium">
+        {typeof value === 'string' ? value : value}
+      </Typography>
+    </Box>
+  );
+}
+
+// ─── 设备信息标签页 ───
+function DeviceInfoTab({ device }: { device: Device }) {
+  return (
+    <Box className="py-2">
+      <Box className="grid grid-cols-2 gap-x-6 gap-y-4 mb-6">
+        <InfoRow label="设备名称" value={device.name} />
+        <InfoRow label="设备编号" value={device.code} />
+        <InfoRow label="状态" value={
+          <Chip label={device.status === 'online' ? '在线' : device.status === 'offline' ? '离线' : '异常'}
+            size="small"
+            sx={{
+              backgroundColor: device.status === 'online' ? '#dcfce7' : device.status === 'offline' ? '#f3f4f6' : '#fee2e2',
+              color: device.status === 'online' ? '#16a34a' : device.status === 'offline' ? '#6b7280' : '#dc2626',
+              fontWeight: 600, height: 22, fontSize: 11,
+            }}
+          />
+        } />
+        <InfoRow label="所属位置" value={device.room} />
+        <InfoRow label="最近活跃" value={device.lastActive} />
+      </Box>
+
+      <Typography variant="subtitle2" className="font-bold text-gray-700 mb-3 flex items-center gap-1">
+        <Router sx={{ fontSize: 16 }} /> 网络信息
+      </Typography>
+      <Box className="grid grid-cols-2 gap-x-6 gap-y-3">
+        <InfoRow label="上行网速" value={`${device.uploadSpeed} Mbps`} />
+        <InfoRow label="下行网速" value={`${device.downloadSpeed} Mbps`} />
+        <InfoRow label="流入流量" value={`${device.inboundTraffic} MB`} />
+        <InfoRow label="流出流量" value={`${device.outboundTraffic} MB`} />
+        <InfoRow label="网络达标" value={device.networkOk ? '✅ 达标' : '❌ 不达标'} />
+      </Box>
+    </Box>
+  );
+}
+
+// ─── 硬件参数标签页 ───
+function HardwareTab({ device }: { device: Device }) {
+  const items: { label: string; value: string; ok: boolean | null }[] = [
+    { label: 'CPU 型号', value: device.hardware.cpuModel, ok: null },
+    { label: 'CPU 使用率', value: `${device.hardware.cpuUsage}%`, ok: device.hardware.cpuUsage <= 80 },
+    { label: 'CPU 平均温度', value: `${device.hardware.cpuTemp}°C`, ok: device.hardware.cpuTemp <= 75 },
+    { label: '内存大小', value: `${device.hardware.memorySize} GB`, ok: device.hardware.memorySize >= 4 },
+    { label: '内存使用率', value: `${device.hardware.memoryUsage}%`, ok: device.hardware.memoryUsage <= 80 },
+    { label: '系统盘容量', value: `${device.hardware.systemDiskSize} GB`, ok: null },
+    { label: '系统盘使用率', value: `${device.hardware.systemDiskUsage}%`, ok: device.hardware.systemDiskUsage <= 85 },
+    { label: '数据盘容量', value: `${device.hardware.dataDiskSize} GB`, ok: null },
+    { label: '数据盘使用率', value: `${device.hardware.dataDiskUsage}%`, ok: device.hardware.dataDiskUsage <= 85 },
+    { label: '操作系统', value: device.hardware.os, ok: null },
+    { label: '屏幕分辨率', value: device.hardware.resolution, ok: null },
+    { label: '触摸屏', value: device.hardware.touchScreen ? '支持' : '不支持', ok: null },
+    { label: '音响状态', value: device.hardware.speakerOk ? '正常' : '异常', ok: device.hardware.speakerOk },
+    { label: '麦克风状态', value: device.hardware.microphoneOk ? '正常' : '异常', ok: device.hardware.microphoneOk },
+    { label: '摄像头状态', value: device.hardware.cameraOk ? '正常' : '异常', ok: device.hardware.cameraOk },
+  ];
+
+  return (
+    <Box className="py-2">
+      <Box className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+        {items.map((item) => (
+          <Box key={item.label} className="flex items-center justify-between py-2 border-b border-gray-50">
+            <Typography variant="body2" color="text.secondary">{item.label}</Typography>
+            <Box className="flex items-center gap-1.5">
+              <Typography variant="body2" className="font-medium">{item.value}</Typography>
+              {item.ok !== null && (
+                item.ok
+                  ? <CheckCircle sx={{ fontSize: 16, color: '#22c55e' }} />
+                  : <Cancel sx={{ fontSize: 16, color: '#ef4444' }} />
+              )}
+            </Box>
+          </Box>
+        ))}
+      </Box>
+      <Box className="mt-4 p-3 bg-gray-50 rounded-lg flex items-center gap-2">
+        <Typography variant="body2" className="font-medium">硬件达标：</Typography>
+        {device.hardwareOk
+          ? <Chip label="达标" size="small" sx={{ backgroundColor: '#dcfce7', color: '#16a34a', fontWeight: 600 }} />
+          : <Chip label="不达标" size="small" sx={{ backgroundColor: '#fee2e2', color: '#dc2626', fontWeight: 600 }} />
+        }
+      </Box>
+    </Box>
+  );
+}
+
+// ─── 安全情况标签页 ───
+function SecurityTab({ device }: { device: Device }) {
+  return (
+    <Box className="py-2">
+      <Box className="space-y-3 mb-4">
+        {device.security.map((item) => (
+          <Box key={item.name} className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded-lg">
+            <Box className="flex items-center gap-2">
+              {item.ok
+                ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
+                : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
+              }
+              <Box>
+                <Typography variant="body2" className="font-medium">{item.name}</Typography>
+                <Typography variant="caption" color="text.secondary">{item.detail}</Typography>
+              </Box>
+            </Box>
+            <Chip
+              label={item.ok ? '正常' : '异常'}
+              size="small"
+              sx={{
+                backgroundColor: item.ok ? '#dcfce7' : '#fee2e2',
+                color: item.ok ? '#16a34a' : '#dc2626',
+                fontWeight: 600, height: 22, fontSize: 11,
+              }}
+            />
+          </Box>
+        ))}
+      </Box>
+      <Box className="p-4 rounded-lg border"
+        sx={{ borderColor: device.securityOk ? '#bbf7d0' : '#fecaca', backgroundColor: device.securityOk ? '#f0fdf4' : '#fef2f2' }}
+      >
+        <Box className="flex items-center gap-2">
+          {device.securityOk
+            ? <CheckCircle sx={{ fontSize: 24, color: '#22c55e' }} />
+            : <Cancel sx={{ fontSize: 24, color: '#ef4444' }} />
+          }
+          <Box>
+            <Typography variant="body2" className="font-bold">
+              安全达标：{device.securityOk ? '达标' : '不达标'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {device.securityOk ? '该设备所有安全检查项均通过' : '该设备存在安全风险，请及时处理'}
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+// ─── 图表工具提示 ───
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <Box className="bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-sm">
+      <Typography variant="caption" className="font-medium text-gray-600 block">{label}</Typography>
+      {payload.map((entry: any, i: number) => (
+        <Typography key={i} variant="caption" sx={{ color: entry.color }}>
+          {entry.name}：{entry.value}
+        </Typography>
+      ))}
+    </Box>
+  );
+}
+
+// ─── 使用分析标签页 ───
+function UsageTab({ device }: { device: Device }) {
+  return (
+    <Box className="py-2 space-y-6">
+      <Box>
+        <Typography variant="subtitle2" className="font-bold text-gray-700 mb-3 flex items-center gap-1">
+          <Timeline sx={{ fontSize: 16 }} /> 设备使用时间段分布
+        </Typography>
+        <ResponsiveContainer width="100%" height={180}>
+          <ReBarChart data={device.usageTimeSlots} barCategoryGap="20%">
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="time" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} />
+            <ReTooltip content={<ChartTooltip />} />
+            <Bar dataKey="count" name="活跃次数" radius={[4, 4, 0, 0]} fill="#3b82f6" />
+          </ReBarChart>
+        </ResponsiveContainer>
+      </Box>
+
+      <Box>
+        <Typography variant="subtitle2" className="font-bold text-gray-700 mb-3 flex items-center gap-1">
+          <BarChart sx={{ fontSize: 16 }} /> 软件使用时长排行
+        </Typography>
+        <Box className="space-y-2">
+          {device.softwareUsage.slice(0, 5).map((sw, i) => (
+            <Box key={sw.name} className="flex items-center gap-3">
+              <Typography variant="caption" className="w-4 font-bold text-gray-400">{i + 1}</Typography>
+              <Typography variant="body2" className="flex-1">{sw.name}</Typography>
+              <Box className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <Box className="h-full rounded-full bg-blue-500"
+                  sx={{ width: `${Math.min(100, (sw.duration / device.softwareUsage[0].duration) * 100)}%` }}
+                />
+              </Box>
+              <Typography variant="caption" className="font-medium min-w-[50px] text-right">
+                {sw.duration > 60 ? `${(sw.duration / 60).toFixed(1)}h` : `${sw.duration}min`}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
+      <Box>
+        <Typography variant="subtitle2" className="font-bold text-gray-700 mb-3">软件使用列表</Typography>
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f9fafb' }}>
+                <TableCell sx={{ fontWeight: 600 }}>软件名称</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>使用时长</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>打开次数</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {device.softwareUsage.map((sw) => (
+                <TableRow key={sw.name}>
+                  <TableCell>{sw.name}</TableCell>
+                  <TableCell>{sw.duration > 60 ? `${(sw.duration / 60).toFixed(1)} 小时` : `${sw.duration} 分钟`}</TableCell>
+                  <TableCell>{sw.opens} 次</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Box>
+
+      {device.teacherUsage.length > 0 && (
+        <Box>
+          <Typography variant="subtitle2" className="font-bold text-gray-700 mb-3">老师使用情况</Typography>
+          {device.teacherUsage.map((t, i) => (
+            <Box key={i} className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+              <Typography variant="body2" className="font-medium">{t.name}</Typography>
+              <Typography variant="caption" color="text.secondary">最近使用：{t.time}</Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+// ─── 异常记录标签页 ───
+function AnomalyTab({ device }: { device: Device }) {
+  return (
+    <Box className="py-2">
+      {device.anomalies.length === 0 ? (
+        <Box className="text-center py-12">
+          <CheckCircle sx={{ fontSize: 48, color: '#22c55e' }} />
+          <Typography variant="body1" className="mt-2 font-medium text-green-600">暂无异常记录</Typography>
+          <Typography variant="body2" color="text.secondary">该设备运行正常</Typography>
+        </Box>
+      ) : (
+        <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow sx={{ backgroundColor: '#f9fafb' }}>
+                <TableCell sx={{ fontWeight: 600, width: 140 }}>时间</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: 100 }}>异常类型</TableCell>
+                <TableCell sx={{ fontWeight: 600 }}>描述</TableCell>
+                <TableCell sx={{ fontWeight: 600, width: 90 }}>状态</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {device.anomalies.map((item, i) => (
+                <TableRow key={i}>
+                  <TableCell><Typography variant="caption">{item.time}</Typography></TableCell>
+                  <TableCell>
+                    <Chip label={item.type} size="small" variant="outlined" sx={{ fontSize: 11, height: 22 }} />
+                  </TableCell>
+                  <TableCell><Typography variant="body2">{item.desc}</Typography></TableCell>
+                  <TableCell>
+                    <Chip
+                      label={item.status === 'resolved' ? '已恢复' : item.status === 'processing' ? '处理中' : '未恢复'}
+                      size="small"
+                      sx={{
+                        backgroundColor: item.status === 'resolved' ? '#dcfce7' : item.status === 'processing' ? '#fef9c3' : '#fee2e2',
+                        color: item.status === 'resolved' ? '#16a34a' : item.status === 'processing' ? '#ca8a04' : '#dc2626',
+                        fontWeight: 600, height: 22, fontSize: 11,
+                      }}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
+  );
+}
+
+// ─── 设备详情弹窗 ───
+function DeviceDetailDialog({
+  device, open, onClose, tab, onTabChange,
+}: {
+  device: Device | null;
+  open: boolean;
+  onClose: () => void;
+  tab: number;
+  onTabChange: (t: number) => void;
+}) {
+  if (!device) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb', pb: 2 }}>
+        <Box className="flex items-center justify-between">
+          <Box className="flex items-center gap-2">
+            <Computer className="text-blue-600" />
+            <Typography variant="h6">{device.name}</Typography>
+            <Chip
+              label={device.status === 'online' ? '在线' : device.status === 'offline' ? '离线' : '异常'}
+              size="small"
+              sx={{
+                backgroundColor: device.status === 'online' ? '#dcfce7' : device.status === 'offline' ? '#f3f4f6' : '#fee2e2',
+                color: device.status === 'online' ? '#16a34a' : device.status === 'offline' ? '#6b7280' : '#dc2626',
+                fontWeight: 600, height: 22, fontSize: 11,
+              }}
+            />
+          </Box>
+          <IconButton onClick={onClose} size="small"><Close /></IconButton>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '16px !important' }}>
+        <Tabs value={tab} onChange={(_, v) => onTabChange(v)} sx={{ mb: 2, borderBottom: '1px solid #e5e7eb' }}>
+          <Tab label="设备信息" />
+          <Tab label="硬件参数" />
+          <Tab label="安全情况" />
+          <Tab label="使用分析" />
+          <Tab label="异常记录" />
+        </Tabs>
+        {tab === 0 && <DeviceInfoTab device={device} />}
+        {tab === 1 && <HardwareTab device={device} />}
+        {tab === 2 && <SecurityTab device={device} />}
+        {tab === 3 && <UsageTab device={device} />}
+        {tab === 4 && <AnomalyTab device={device} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─── StatCard 组件 ───
 function StatCard({
   icon, title, value, unit, numerator, denominator, color, bgClass,
@@ -693,6 +1034,14 @@ export default function CentralOverview() {
             labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 共 ${count}`}
           />
         </Card>
+        {/* 设备详情弹窗 */}
+        <DeviceDetailDialog
+          device={detailDevice}
+          open={Boolean(detailDevice)}
+          onClose={() => setDetailDevice(null)}
+          tab={detailTab}
+          onTabChange={setDetailTab}
+        />
       </Box>
     </Box>
   );
