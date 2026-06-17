@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, IconButton,
-  TextField, InputAdornment, Chip, Tooltip,
+  TextField, InputAdornment, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions,
   Tabs, Tab, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TablePagination,
@@ -16,7 +16,6 @@ import {
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer,
-  Cell,
 } from 'recharts';
 
 // ─── 类型定义 ───
@@ -291,7 +290,7 @@ function computeOverviewStats(devices: Device[], thresholds: Thresholds) {
   };
 
   return {
-    total,
+    total, activeRecent,
     usageRate, networkRate, hardwareRate, smoothnessRate, securityRate,
     usageColor: rateColor(usageRate, thresholds.usageRate),
     networkColor: rateColor(networkRate, thresholds.networkRate),
@@ -324,7 +323,7 @@ export default function CentralOverview() {
     {
       icon: <MonitorHeart sx={{ fontSize: 32 }} />, title: '设备使用率',
       value: stats.usageRate, unit: '%',
-      numerator: devices.filter(d => d.status !== 'offline').length,
+      numerator: stats.activeRecent,
       denominator: stats.total,
       color: stats.usageColor, bgClass: 'bg-green-50',
     },
