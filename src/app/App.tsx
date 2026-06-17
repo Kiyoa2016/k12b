@@ -53,6 +53,10 @@ import {
   Cloud,
   School,
   Mic,
+  Dashboard,
+  Devices,
+  Campaign,
+  ReceiptLong,
 } from '@mui/icons-material';
 import TeacherManagement from './components/TeacherManagement';
 import SchoolManagement from './components/SchoolManagement';
@@ -75,6 +79,11 @@ import RoleManagement from './components/RoleManagement';
 import PermissionConfig from './components/PermissionConfig';
 import type { Role } from './types/permissions';
 import VoiceManagement from './components/VoiceManagement';
+import CentralOverview from './components/CentralOverview';
+import DeviceManagement from './components/DeviceManagement';
+import InfoPublish from './components/InfoPublish';
+import SecurityPolicy from './components/SecurityPolicy';
+import OperationLog from './components/OperationLog';
 
 interface Template {
   id: string;
@@ -86,7 +95,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'device-mgmt' | 'info-publish' | 'security-policy' | 'operation-log'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -272,8 +281,13 @@ export default function App() {
         {
           id: 'central', label: '集控管理', icon: <MenuIcon />,
           children: [
+            { id: 'central-overview', label: '总览', pageId: 'central-overview' },
             { id: 'classroom', label: '教室管理', pageId: 'classroom' },
+            { id: 'device-mgmt', label: '设备管理', pageId: 'device-mgmt' },
             { id: 'livestream', label: '实时流', pageId: 'livestream' },
+            { id: 'info-publish', label: '信息发布', pageId: 'info-publish' },
+            { id: 'security-policy', label: '安全策略', pageId: 'security-policy' },
+            { id: 'operation-log', label: '运行日志', pageId: 'operation-log' },
           ],
         },
       ],
@@ -380,6 +394,16 @@ export default function App() {
           onBack={() => setCurrentPage('cloudclassroom')}
           onPlay={(video) => handleOpenCloudPlay(video, cloudRelated)}
         />
+      ) : currentPage === 'central-overview' ? (
+        <CentralOverview />
+      ) : currentPage === 'device-mgmt' ? (
+        <DeviceManagement />
+      ) : currentPage === 'info-publish' ? (
+        <InfoPublish />
+      ) : currentPage === 'security-policy' ? (
+        <SecurityPolicy />
+      ) : currentPage === 'operation-log' ? (
+        <OperationLog />
       ) : currentPage === 'classroom' ? (
         <ClassroomManagement />
       ) : currentPage === 'livestream' ? (

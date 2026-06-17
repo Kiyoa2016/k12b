@@ -130,6 +130,49 @@ export const ALL_PAGES: PageConfig[] = [
     label: '实时流',
     buttons: [],
   },
+  {
+    key: 'central-overview',
+    label: '集控总览',
+    buttons: [],
+  },
+  {
+    key: 'device-mgmt',
+    label: '设备管理',
+    buttons: [
+      { key: 'add', label: '添加设备' },
+      { key: 'edit', label: '编辑' },
+      { key: 'delete', label: '删除' },
+      { key: 'view', label: '查看' },
+    ],
+  },
+  {
+    key: 'info-publish',
+    label: '信息发布',
+    buttons: [
+      { key: 'publish', label: '发布信息' },
+      { key: 'edit', label: '编辑' },
+      { key: 'delete', label: '删除' },
+      { key: 'take-down', label: '下架' },
+    ],
+  },
+  {
+    key: 'security-policy',
+    label: '安全策略',
+    buttons: [
+      { key: 'add', label: '添加策略' },
+      { key: 'edit', label: '编辑' },
+      { key: 'delete', label: '删除' },
+      { key: 'toggle', label: '启用/停用' },
+    ],
+  },
+  {
+    key: 'operation-log',
+    label: '运行日志',
+    buttons: [
+      { key: 'export', label: '导出日志' },
+      { key: 'clear', label: '清除日志' },
+    ],
+  },
 ];
 
 // 帮助函数：判断角色是否有某个按钮权限

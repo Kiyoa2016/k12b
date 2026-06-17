@@ -225,6 +225,162 @@ function getDefaultThresholds(): Thresholds {
   return DEFAULT_THRESHOLDS;
 }
 
+// ─── StatCard 组件 ───
+function StatCard({
+  icon, title, value, unit, numerator, denominator, color, bgClass,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string | number;
+  unit?: string;
+  numerator?: number;
+  denominator?: number;
+  color: string;
+  bgClass: string;
+}) {
+  return (
+    <Card className="flex-1 min-w-[180px]" elevation={0} sx={{ border: '1px solid rgba(0,0,0,0.08)', borderRadius: 3 }}>
+      <CardContent className="p-5">
+        <Box className="flex items-center gap-3">
+          <Box className={`${bgClass} rounded-2xl p-3 flex-shrink-0`}>
+            <Box sx={{ color }}>{icon}</Box>
+          </Box>
+          <Box className="min-w-0">
+            <Typography variant="caption" color="text.secondary" className="whitespace-nowrap">
+              {title}
+            </Typography>
+            <Box className="flex items-baseline gap-1">
+              <Typography variant="h4" className="font-bold" sx={{ color, lineHeight: 1.2 }}>
+                {value}
+                {unit && (
+                  <Typography component="span" variant="body2" color="text.secondary" className="ml-0.5 font-normal">
+                    {unit}
+                  </Typography>
+                )}
+              </Typography>
+            </Box>
+            {numerator !== undefined && denominator !== undefined && (
+              <Typography variant="caption" color="text.secondary">
+                {numerator}/{denominator}
+              </Typography>
+            )}
+          </Box>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── 概览数据聚合 ───
+function computeOverviewStats(devices: Device[], thresholds: Thresholds) {
+  const total = devices.length;
+  const activeRecent = devices.filter((d) => {
+    if (d.status === 'offline') return false;
+    return Date.now() - new Date(d.lastActive).getTime() < 86400000;
+  }).length;
+  const usageRate = Math.round((activeRecent / total) * 100);
+  const networkRate = Math.round((devices.filter((d) => d.networkOk).length / total) * 100);
+  const hardwareRate = Math.round((devices.filter((d) => d.hardwareOk).length / total) * 100);
+  const smoothnessRate = Math.round((devices.filter((d) => d.smoothnessOk).length / total) * 100);
+  const securityRate = Math.round((devices.filter((d) => d.securityOk).length / total) * 100);
+
+  const rateColor = (rate: number, threshold: number): string => {
+    if (rate >= threshold) return '#22c55e';
+    if (rate >= threshold * 0.9) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  return {
+    total,
+    usageRate, networkRate, hardwareRate, smoothnessRate, securityRate,
+    usageColor: rateColor(usageRate, thresholds.usageRate),
+    networkColor: rateColor(networkRate, thresholds.networkRate),
+    hardwareColor: rateColor(hardwareRate, thresholds.hardwareRate),
+    smoothnessColor: rateColor(smoothnessRate, thresholds.smoothnessRate),
+    securityColor: rateColor(securityRate, thresholds.securityRate),
+  };
+}
+
 export default function CentralOverview() {
-  return <Box>待实现</Box>;
+  const [devices] = useState<Device[]>(generateDevices);
+  const [thresholds, setThresholds] = useState<Thresholds>(getDefaultThresholds);
+  const [thresholdDialogOpen, setThresholdDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<DeviceStatus>('all');
+  const [complianceFilter, setComplianceFilter] = useState<ComplianceFilter>('all');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [detailDevice, setDetailDevice] = useState<Device | null>(null);
+  const [detailTab, setDetailTab] = useState(0);
+
+  const stats = useMemo(() => computeOverviewStats(devices, thresholds), [devices, thresholds]);
+
+  const cardData = useMemo(() => [
+    {
+      icon: <Devices sx={{ fontSize: 32 }} />, title: '监管设备数',
+      value: stats.total, unit: '台',
+      color: '#3b82f6', bgClass: 'bg-blue-50',
+    },
+    {
+      icon: <MonitorHeart sx={{ fontSize: 32 }} />, title: '设备使用率',
+      value: stats.usageRate, unit: '%',
+      numerator: devices.filter(d => d.status !== 'offline').length,
+      denominator: stats.total,
+      color: stats.usageColor, bgClass: 'bg-green-50',
+    },
+    {
+      icon: <Router sx={{ fontSize: 32 }} />, title: '网络达标率',
+      value: stats.networkRate, unit: '%',
+      numerator: devices.filter(d => d.networkOk).length,
+      denominator: stats.total,
+      color: stats.networkColor, bgClass: 'bg-blue-50',
+    },
+    {
+      icon: <Computer sx={{ fontSize: 32 }} />, title: '硬件达标率',
+      value: stats.hardwareRate, unit: '%',
+      numerator: devices.filter(d => d.hardwareOk).length,
+      denominator: stats.total,
+      color: stats.hardwareColor, bgClass: 'bg-purple-50',
+    },
+    {
+      icon: <Speed sx={{ fontSize: 32 }} />, title: '流畅度达标率',
+      value: stats.smoothnessRate, unit: '%',
+      numerator: devices.filter(d => d.smoothnessOk).length,
+      denominator: stats.total,
+      color: stats.smoothnessColor, bgClass: 'bg-orange-50',
+    },
+    {
+      icon: <Security sx={{ fontSize: 32 }} />, title: '安全达标率',
+      value: stats.securityRate, unit: '%',
+      numerator: devices.filter(d => d.securityOk).length,
+      denominator: stats.total,
+      color: stats.securityColor, bgClass: 'bg-red-50',
+    },
+  ], [stats, devices]);
+
+  return (
+    <Box className="overflow-auto h-[calc(100vh-64px)] bg-gray-50">
+      <Box className="p-4 sm:p-6">
+        {/* 标题区 */}
+        <Box className="mb-6">
+          <Typography variant="h5" className="font-bold">
+            集控总览
+          </Typography>
+          <Typography variant="body2" color="text.secondary" className="mt-1">
+            设备盘点与运行状态监控
+          </Typography>
+        </Box>
+
+        {/* 概览卡片 */}
+        <Box className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+          {cardData.map((item) => (
+            <StatCard key={item.title} {...item} />
+          ))}
+        </Box>
+
+        {/* 操作栏（占位，后续Task实现） */}
+        <Box className="mb-4" />
+      </Box>
+    </Box>
+  );
 }
