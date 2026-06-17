@@ -84,6 +84,7 @@ import DeviceManagement from './components/DeviceManagement';
 import InfoPublish from './components/InfoPublish';
 import SecurityPolicy from './components/SecurityPolicy';
 import OperationLog from './components/OperationLog';
+import NewsBroadcast from './components/NewsBroadcast';
 
 interface Template {
   id: string;
@@ -95,7 +96,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'device-mgmt' | 'info-publish' | 'security-policy' | 'operation-log'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'info-publish' | 'security-policy' | 'operation-log'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -282,6 +283,7 @@ export default function App() {
           id: 'central', label: '集控管理', icon: <MenuIcon />,
           children: [
             { id: 'central-overview', label: '总览', pageId: 'central-overview' },
+            { id: 'news-broadcast', label: '时事转播', pageId: 'news-broadcast' },
             { id: 'classroom', label: '教室管理', pageId: 'classroom' },
             { id: 'device-mgmt', label: '设备管理', pageId: 'device-mgmt' },
             { id: 'livestream', label: '实时流', pageId: 'livestream' },
@@ -394,6 +396,8 @@ export default function App() {
           onBack={() => setCurrentPage('cloudclassroom')}
           onPlay={(video) => handleOpenCloudPlay(video, cloudRelated)}
         />
+      ) : currentPage === 'news-broadcast' ? (
+        <NewsBroadcast />
       ) : currentPage === 'central-overview' ? (
         <CentralOverview />
       ) : currentPage === 'device-mgmt' ? (

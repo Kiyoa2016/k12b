@@ -173,6 +173,17 @@ export const ALL_PAGES: PageConfig[] = [
       { key: 'clear', label: '清除日志' },
     ],
   },
+  {
+    key: 'news-broadcast',
+    label: '时事转播',
+    buttons: [
+      { key: 'create', label: '新建计划' },
+      { key: 'edit', label: '编辑' },
+      { key: 'delete', label: '删除' },
+      { key: 'toggle-status', label: '启停' },
+      { key: 'config-watermark', label: '水印设置' },
+    ],
+  },
 ];
 
 // 帮助函数：判断角色是否有某个按钮权限
