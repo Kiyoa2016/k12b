@@ -159,10 +159,10 @@ export const ALL_PAGES: PageConfig[] = [
     key: 'security-policy',
     label: '安全策略',
     buttons: [
-      { key: 'add', label: '添加策略' },
-      { key: 'edit', label: '编辑' },
-      { key: 'delete', label: '删除' },
-      { key: 'toggle', label: '启用/停用' },
+      { key: 'cleanup', label: '磁盘清理' },
+      { key: 'migrate', label: '文件迁移' },
+      { key: 'format', label: '磁盘格式化' },
+      { key: 'transcribe', label: '音频转文字' },
     ],
   },
   {

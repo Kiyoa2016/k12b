@@ -689,7 +689,31 @@ function AudioTranscribePanel() {
   );
 }
 
-// ===== 占位导出 =====
 export default function SecurityPolicy() {
-  return <Box>待实现</Box>;
+  const [tab, setTab] = useState(0);
+
+  return (
+    <Box className="overflow-auto h-[calc(100vh-64px)] bg-gray-50">
+      <Box className="p-4 sm:p-6">
+        <Box className="mb-6">
+          <Typography variant="h5" className="font-bold">🔒 安全策略</Typography>
+          <Typography variant="body2" color="text.secondary" className="mt-1">
+            配置和管理教室终端的安全策略与维护操作
+          </Typography>
+        </Box>
+
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
+          <Tab label="🧹 磁盘清理" />
+          <Tab label="📂 文件迁移" />
+          <Tab label="⚠️ 磁盘格式化" />
+          <Tab label="🎙️ 音频转文字" />
+        </Tabs>
+
+        {tab === 0 && <DiskCleanupPanel />}
+        {tab === 1 && <FileMigrationPanel />}
+        {tab === 2 && <DiskFormatPanel />}
+        {tab === 3 && <AudioTranscribePanel />}
+      </Box>
+    </Box>
+  );
 }
