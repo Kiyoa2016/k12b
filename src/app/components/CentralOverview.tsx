@@ -391,6 +391,33 @@ function ThresholdDialog({
   );
 }
 
+// ─── 导出 CSV ───
+function exportToCSV(devices: Device[], filename: string) {
+  const headers = [
+    '设备名称', '设备编号', '位置', '状态', '最近活跃',
+    '上行网速(Mbps)', '下行网速(Mbps)', '流入流量(MB)', '流出流量(MB)',
+    '网络达标', '硬件达标', '流畅度达标', '安全达标',
+  ];
+  const rows = devices.map((d) => [
+    d.name, d.code, d.room,
+    d.status === 'online' ? '在线' : d.status === 'offline' ? '离线' : '异常',
+    d.lastActive,
+    String(d.uploadSpeed), String(d.downloadSpeed), String(d.inboundTraffic), String(d.outboundTraffic),
+    d.networkOk ? '是' : '否', d.hardwareOk ? '是' : '否',
+    d.smoothnessOk ? '是' : '否', d.securityOk ? '是' : '否',
+  ]);
+  const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 export default function CentralOverview() {
   const [devices] = useState<Device[]>(generateDevices);
   const [thresholds, setThresholds] = useState<Thresholds>(getDefaultThresholds);
@@ -404,6 +431,23 @@ export default function CentralOverview() {
   const [detailTab, setDetailTab] = useState(0);
 
   const stats = useMemo(() => computeOverviewStats(devices, thresholds), [devices, thresholds]);
+
+  const filteredDevices = useMemo(() => {
+    return devices.filter((d) => {
+      if (searchTerm) {
+        const term = searchTerm.toLowerCase();
+        if (!d.name.toLowerCase().includes(term) && !d.code.toLowerCase().includes(term)) {
+          return false;
+        }
+      }
+      if (statusFilter !== 'all' && d.status !== statusFilter) return false;
+      if (complianceFilter === 'all-pass' && (!d.networkOk || !d.hardwareOk || !d.smoothnessOk || !d.securityOk)) return false;
+      if (complianceFilter === 'has-fail' && d.networkOk && d.hardwareOk && d.smoothnessOk && d.securityOk) return false;
+      return true;
+    });
+  }, [devices, searchTerm, statusFilter, complianceFilter]);
+
+  const pagedDevices = filteredDevices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const cardData = useMemo(() => [
     {
@@ -482,7 +526,7 @@ export default function CentralOverview() {
             variant="outlined"
             size="small"
             startIcon={<Download />}
-            // TODO: implement in Task 4
+            onClick={() => exportToCSV(devices, '设备数据.csv')}
           >
             导出数据
           </Button>
@@ -498,6 +542,157 @@ export default function CentralOverview() {
             localStorage.setItem('central-overview-thresholds', JSON.stringify(t));
           }}
         />
+
+        {/* 筛选栏 */}
+        <Box className="mb-4 flex flex-wrap items-center gap-3">
+          <TextField
+            size="small"
+            placeholder="搜索设备名称或编号..."
+            value={searchTerm}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start"><Search fontSize="small" /></InputAdornment>
+              ),
+            }}
+            sx={{ minWidth: 260 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 100 }}>
+            <Select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value as DeviceStatus); setPage(0); }}
+              displayEmpty
+            >
+              <MenuItem value="all">全部状态</MenuItem>
+              <MenuItem value="online">在线</MenuItem>
+              <MenuItem value="offline">离线</MenuItem>
+              <MenuItem value="abnormal">异常</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <Select
+              value={complianceFilter}
+              onChange={(e) => { setComplianceFilter(e.target.value as ComplianceFilter); setPage(0); }}
+              displayEmpty
+            >
+              <MenuItem value="all">全部达标状态</MenuItem>
+              <MenuItem value="all-pass">全部达标</MenuItem>
+              <MenuItem value="has-fail">存在不达标</MenuItem>
+            </Select>
+          </FormControl>
+          <Typography variant="caption" color="text.secondary">
+            共 {filteredDevices.length} 台设备
+          </Typography>
+        </Box>
+
+        {/* 设备表格 */}
+        <Card elevation={0} sx={{ border: '1px solid rgba(0,0,0,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={{ backgroundColor: '#f9fafb' }}>
+                  <TableCell sx={{ fontWeight: 600, width: 50 }}>序号</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 160 }}>设备名称</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 110 }}>设备编号</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 180 }}>所属位置</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 70 }}>状态</TableCell>
+                  <TableCell sx={{ fontWeight: 600, minWidth: 130 }}>最近活跃</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 72 }}>网络</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 72 }}>硬件</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 72 }}>流畅度</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 72 }}>安全</TableCell>
+                  <TableCell sx={{ fontWeight: 600, width: 90 }}>操作</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pagedDevices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={11} align="center" sx={{ py: 8 }}>
+                      <Typography variant="body2" color="text.secondary">未找到匹配的设备</Typography>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedDevices.map((device, index) => (
+                    <TableRow key={device.id} hover>
+                      <TableCell>{page * rowsPerPage + index + 1}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" className="font-medium">{device.name}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">{device.code}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" sx={{ fontSize: 13 }}>{device.room}</Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          label={device.status === 'online' ? '在线' : device.status === 'offline' ? '离线' : '异常'}
+                          size="small"
+                          sx={{
+                            height: 22, fontSize: 11,
+                            backgroundColor: device.status === 'online' ? '#dcfce7' : device.status === 'offline' ? '#f3f4f6' : '#fee2e2',
+                            color: device.status === 'online' ? '#16a34a' : device.status === 'offline' ? '#6b7280' : '#dc2626',
+                            fontWeight: 600,
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="caption" color="text.secondary">{device.lastActive}</Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        {device.networkOk
+                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
+                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
+                        }
+                      </TableCell>
+                      <TableCell align="center">
+                        {device.hardwareOk
+                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
+                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
+                        }
+                      </TableCell>
+                      <TableCell align="center">
+                        {device.smoothnessOk
+                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
+                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
+                        }
+                      </TableCell>
+                      <TableCell align="center">
+                        {device.securityOk
+                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
+                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="small"
+                          variant="text"
+                          onClick={() => { setDetailDevice(device); setDetailTab(0); }}
+                          sx={{ fontSize: 12, whiteSpace: 'nowrap', minWidth: 'auto' }}
+                        >
+                          查看详情
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={filteredDevices.length}
+            page={page}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            labelRowsPerPage="每页："
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 共 ${count}`}
+          />
+        </Card>
       </Box>
     </Box>
   );
