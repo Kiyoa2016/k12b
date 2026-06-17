@@ -648,7 +648,269 @@ function PlanDetailDialog({
   );
 }
 
-// ===== 占位导出 =====
 export default function NewsBroadcast() {
-  return <Box>待实现</Box>;
+  const [tab, setTab] = useState(0);
+  const [plans, setPlans] = useState<BroadcastPlan[]>(generateMockPlans);
+  const histories = useMemo(() => generateMockHistory(plans), [plans]);
+  const [watermark, setWatermark] = useState<WatermarkConfig>(getDefaultWatermark);
+  const [watermarkOpen, setWatermarkOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [detailPlan, setDetailPlan] = useState<BroadcastPlan | null>(null);
+  const [editPlan, setEditPlan] = useState<BroadcastPlan | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | BroadcastStatus>('all');
+  const [methodFilter, setMethodFilter] = useState<'all' | BroadcastMethod>('all');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [execPage, setExecPage] = useState(0);
+  const [execRowsPerPage, setExecRowsPerPage] = useState(10);
+  const [execPlanFilter, setExecPlanFilter] = useState('all');
+
+  const filteredPlans = plans.filter((p) => {
+    if (searchTerm && !p.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    if (statusFilter !== 'all' && p.status !== statusFilter) return false;
+    if (methodFilter !== 'all' && p.method !== methodFilter) return false;
+    return true;
+  });
+
+  const pagedPlans = filteredPlans.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  const filteredExec = histories.filter((h) => {
+    if (execPlanFilter !== 'all' && h.planId !== execPlanFilter) return false;
+    return true;
+  });
+  const pagedExec = filteredExec.slice(execPage * execRowsPerPage, execPage * execRowsPerPage + execRowsPerPage);
+
+  const handleCreatePlan = (plan: BroadcastPlan) => {
+    setPlans((prev) => [...prev, plan]);
+  };
+
+  const handleUpdatePlan = (plan: BroadcastPlan) => {
+    setPlans((prev) => prev.map((p) => (p.id === plan.id ? plan : p)));
+  };
+
+  const handleDeletePlan = (id: string) => {
+    setPlans((prev) => prev.filter((p) => p.id !== id));
+  };
+
+  const handleToggleStatus = (plan: BroadcastPlan) => {
+    setPlans((prev) =>
+      prev.map((p) =>
+        p.id === plan.id
+          ? { ...p, status: p.status === 'running' ? 'stopped' as BroadcastStatus : 'running' as BroadcastStatus }
+          : p
+      )
+    );
+  };
+
+  const openEdit = (plan: BroadcastPlan) => {
+    setEditPlan(plan);
+    setCreateOpen(true);
+  };
+
+  const allDeviceNames = DEVICE_NAMES;
+
+  return (
+    <Box className="overflow-auto h-[calc(100vh-64px)] bg-gray-50">
+      <Box className="p-4 sm:p-6">
+        {/* 标题行 */}
+        <Box className="mb-4 flex items-center justify-between">
+          <Box>
+            <Typography variant="h5" className="font-bold">📡 时事转播</Typography>
+            <Typography variant="body2" color="text.secondary" className="mt-1">
+              管理和发布新闻转播到各教室终端
+            </Typography>
+          </Box>
+          <Box className="flex gap-2">
+            <Button variant="outlined" size="small"
+              startIcon={<Settings />}
+              onClick={() => setWatermarkOpen(true)}>
+              水印设置
+            </Button>
+            <Button variant="contained" size="small"
+              startIcon={<Add />}
+              onClick={() => { setEditPlan(null); setCreateOpen(true); }}>
+              新建计划
+            </Button>
+          </Box>
+        </Box>
+
+        {/* Tab 切换 */}
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
+          <Tab label="计划列表" />
+          <Tab label="执行结果" />
+        </Tabs>
+
+        {/* ====== Tab 0: 计划列表 ====== */}
+        {tab === 0 && (
+          <>
+            <Box className="mb-4 flex flex-wrap items-center gap-3">
+              <TextField size="small" placeholder="搜索计划名称..."
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(0); }}
+                InputProps={{ startAdornment: <InputAdornment position="start"><Search fontSize="small" /></InputAdornment> }}
+                sx={{ minWidth: 240 }}
+              />
+              <FormControl size="small" sx={{ minWidth: 100 }}>
+                <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value as any); setPage(0); }}>
+                  <MenuItem value="all">全部状态</MenuItem>
+                  <MenuItem value="running">运行中</MenuItem>
+                  <MenuItem value="pending">待执行</MenuItem>
+                  <MenuItem value="stopped">已停止</MenuItem>
+                  <MenuItem value="error">异常</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl size="small" sx={{ minWidth: 100 }}>
+                <Select value={methodFilter} onChange={(e) => { setMethodFilter(e.target.value as any); setPage(0); }}>
+                  <MenuItem value="all">全部方式</MenuItem>
+                  <MenuItem value="webpage">新闻网页</MenuItem>
+                  <MenuItem value="video">视频文件</MenuItem>
+                </Select>
+              </FormControl>
+              <Typography variant="caption" color="text.secondary">共 {filteredPlans.length} 条计划</Typography>
+            </Box>
+
+            <Card elevation={0} sx={{ border: '1px solid rgba(0,0,0,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: '#f9fafb' }}>
+                      <TableCell sx={{ fontWeight: 600, width: 50 }}>序号</TableCell>
+                      <TableCell sx={{ fontWeight: 600, minWidth: 150 }}>计划名称</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 90 }}>方式</TableCell>
+                      <TableCell sx={{ fontWeight: 600, minWidth: 200 }}>循环</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 80 }}>设备</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 80 }}>状态</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 140 }}>操作</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pagedPlans.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                          <Typography variant="body2" color="text.secondary">未找到匹配的计划</Typography>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      pagedPlans.map((plan, index) => (
+                        <TableRow key={plan.id} hover>
+                          <TableCell>{page * rowsPerPage + index + 1}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" className="font-medium">{plan.name}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Chip label={plan.method === 'webpage' ? '网页' : '视频'}
+                              size="small"
+                              icon={plan.method === 'webpage' ? <Language /> : <Videocam />}
+                              variant="outlined"
+                              sx={{ fontSize: 11, height: 22 }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">{getCycleLabel(plan)}</Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="caption">{plan.deviceIds.length} 台</Typography>
+                          </TableCell>
+                          <TableCell><StatusChip status={plan.status} /></TableCell>
+                          <TableCell>
+                            <Box className="flex gap-1">
+                              <Tooltip title="查看详情"><IconButton size="small" onClick={() => setDetailPlan(plan)}><Visibility sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                              <Tooltip title="编辑"><IconButton size="small" onClick={() => openEdit(plan)}><Edit sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                              <Tooltip title={plan.status === 'running' ? '停止' : '启动'}>
+                                <IconButton size="small" onClick={() => handleToggleStatus(plan)}>
+                                  {plan.status === 'running' ? <Stop sx={{ fontSize: 16 }} /> : <PlayArrow sx={{ fontSize: 16 }} />}
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="删除"><IconButton size="small" onClick={() => handleDeletePlan(plan.id)}><Delete sx={{ fontSize: 16 }} /></IconButton></Tooltip>
+                            </Box>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div" count={filteredPlans.length}
+                page={page} onPageChange={(_, p) => setPage(p)}
+                rowsPerPage={rowsPerPage}
+                onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+                rowsPerPageOptions={[10, 20, 50]}
+                labelRowsPerPage="每页：" labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 共 ${count}`}
+              />
+            </Card>
+          </>
+        )}
+
+        {/* ====== Tab 1: 执行结果 ====== */}
+        {tab === 1 && (
+          <>
+            <Box className="mb-4 flex items-center gap-3">
+              <FormControl size="small" sx={{ minWidth: 160 }}>
+                <Select value={execPlanFilter} onChange={(e) => { setExecPlanFilter(e.target.value); setExecPage(0); }}>
+                  <MenuItem value="all">全部计划</MenuItem>
+                  {plans.map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+                </Select>
+              </FormControl>
+              <Typography variant="caption" color="text.secondary">共 {filteredExec.length} 条记录</Typography>
+            </Box>
+            <Card elevation={0} sx={{ border: '1px solid rgba(0,0,0,0.08)', borderRadius: 3, overflow: 'hidden' }}>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ backgroundColor: '#f9fafb' }}>
+                      <TableCell sx={{ fontWeight: 600 }}>时间</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>计划名称</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>设备</TableCell>
+                      <TableCell sx={{ fontWeight: 600, width: 80 }}>状态</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>信息</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {pagedExec.length === 0 ? (
+                      <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8 }}>
+                        <Typography variant="body2" color="text.secondary">暂无执行记录</Typography>
+                      </TableCell></TableRow>
+                    ) : (
+                      pagedExec.map((h) => (
+                        <TableRow key={h.id} hover>
+                          <TableCell><Typography variant="caption">{formatDateTime(h.startTime)}</Typography></TableCell>
+                          <TableCell><Typography variant="body2" className="font-medium">{h.planName}</Typography></TableCell>
+                          <TableCell><Typography variant="body2">{h.deviceName}</Typography></TableCell>
+                          <TableCell><ExecStatusChip status={h.status} /></TableCell>
+                          <TableCell><Typography variant="caption" color="text.secondary">{h.errorMsg || '-'}</Typography></TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+              <TablePagination
+                component="div" count={filteredExec.length}
+                page={execPage} onPageChange={(_, p) => setExecPage(p)}
+                rowsPerPage={execRowsPerPage}
+                onRowsPerPageChange={(e) => { setExecRowsPerPage(parseInt(e.target.value, 10)); setExecPage(0); }}
+                rowsPerPageOptions={[10, 20, 50]}
+                labelRowsPerPage="每页：" labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 共 ${count}`}
+              />
+            </Card>
+          </>
+        )}
+
+        {/* 弹窗 */}
+        <WatermarkDialog open={watermarkOpen} onClose={() => setWatermarkOpen(false)}
+          config={watermark}
+          onSave={(c) => { setWatermark(c); localStorage.setItem('news-broadcast-watermark', JSON.stringify(c)); }}
+        />
+        <CreatePlanDialog open={createOpen} onClose={() => { setCreateOpen(false); setEditPlan(null); }}
+          onSave={(plan) => { editPlan ? handleUpdatePlan(plan) : handleCreatePlan(plan); }}
+          editPlan={editPlan} allDevices={allDeviceNames}
+        />
+        <PlanDetailDialog plan={detailPlan} open={Boolean(detailPlan)}
+          onClose={() => setDetailPlan(null)} histories={histories}
+        />
+      </Box>
+    </Box>
+  );
 }
