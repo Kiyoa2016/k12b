@@ -869,33 +869,137 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
             </Box>
           </section>
 
-          {/* ── 设备详情 Tab 说明 ── */}
+          {/* ── 达标列统计说明 ── */}
           <section>
-            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">📋 设备详情 Tab 说明</Typography>
-            <Box className="bg-gray-50 rounded-lg p-4 space-y-2">
-              {[
-                ['设备信息', '展示设备基础信息（名称、编号、位置、状态）和网络详情（上下行网速、流量统计）。'],
-                ['硬件参数', '展示 15 项硬件指标（CPU 型号/使用率/温度、内存大小/使用率、系统盘/数据盘容量/使用率、操作系统、分辨率、触摸屏、音响、麦克风、摄像头），每项标注达标状态。'],
-                ['安全情况', '展示系统补丁、杀毒软件、防火墙、违规软件、USB 管控 5 项安全检查结果，并给出整体安全达标结论。'],
-                ['使用分析', '展示设备使用时间段分布柱状图、软件使用时长排行、软件使用列表、老师使用情况。'],
-                ['异常记录', '展示设备异常历史记录，包含时间、异常类型、描述和处理状态（已恢复/处理中/未恢复）。'],
-              ].map(([tab, desc]) => (
-                <Box key={tab} className="flex items-start gap-2">
-                  <Typography variant="body2" className="font-medium min-w-[72px]">{tab}：</Typography>
-                  <Typography variant="body2" color="text.secondary">{desc}</Typography>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">✅ 设备列表 4 项达标列说明</Typography>
+            <Typography variant="body2" color="text.secondary" className="mb-2">
+              设备列表中的「网络」「硬件」「流畅度」「安全」四列显示每台设备各项是否达标，
+              绿色 ✓ 表示达标，红色 ✗ 表示不达标。各列的统计口径如下：
+            </Typography>
+            <Box className="space-y-3">
+              <Box className="bg-white border border-green-200 rounded-lg p-3">
+                <Typography variant="body2" className="font-bold text-green-700 mb-1">🌐 网络达标 <code className="text-xs font-mono">(networkOk)</code></Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>统计口径：</strong>基于设备最近一次上报的网络连通性检测结果。如果设备与服务器的心跳/探活检测通过，则为达标。
+                </Typography>
+                <Typography variant="caption" color="text.secondary" className="block mt-1">
+                  ⚠️ 当前代码为随机 Mock（88% 概率达标），未对接真实网络检测逻辑。
+                </Typography>
+              </Box>
+              <Box className="bg-white border border-purple-200 rounded-lg p-3">
+                <Typography variant="body2" className="font-bold text-purple-700 mb-1">💻 硬件达标 <code className="text-xs font-mono">(hardwareOk)</code></Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>统计口径：</strong>以下 9 项指标<strong>全部</strong>满足条件方为达标：
+                </Typography>
+                <Box className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-sm">
+                  {[
+                    'CPU 使用率 ≤ 80%',
+                    'CPU 平均温度 ≤ 75°C',
+                    '内存大小 ≥ 4 GB',
+                    '内存使用率 ≤ 80%',
+                    '系统盘使用率 ≤ 85%',
+                    '数据盘使用率 ≤ 85%',
+                    '音响正常',
+                    '麦克风正常',
+                    '摄像头正常',
+                  ].map((rule) => (
+                    <Typography key={rule} variant="caption" color="text.secondary">• {rule}</Typography>
+                  ))}
                 </Box>
-              ))}
+                <Typography variant="caption" color="text.secondary" className="block mt-1">
+                  ⚠️ 当前代码为随机 Mock（90% 概率达标），未按上述规则做真实逐项判定。
+                </Typography>
+              </Box>
+              <Box className="bg-white border border-orange-200 rounded-lg p-3">
+                <Typography variant="body2" className="font-bold text-orange-700 mb-1">⚡ 流畅度达标 <code className="text-xs font-mono">(smoothnessOk)</code></Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>统计口径：</strong>反映设备系统资源占用是否在合理范围内，综合评估设备运行流畅程度。
+                  当前未定义具体量化指标，后续可根据 CPU + 内存综合使用率或系统响应延迟来定义阈值。
+                </Typography>
+                <Typography variant="body2" color="text.secondary" className="mt-1">
+                  <strong>建议实现方式：</strong>例如 CPU 使用率 ≤ 70% 且 内存使用率 ≤ 75% 判定为流畅达标，
+                  或引入帧率/响应时间等前端性能指标。
+                </Typography>
+                <Typography variant="caption" color="text.secondary" className="block mt-1">
+                  ⚠️ 当前代码为随机 Mock（85% 概率达标），无真实计算逻辑。
+                </Typography>
+              </Box>
+              <Box className="bg-white border border-red-200 rounded-lg p-3">
+                <Typography variant="body2" className="font-bold text-red-700 mb-1">🔒 安全达标 <code className="text-xs font-mono">(securityOk)</code></Typography>
+                <Typography variant="body2" color="text.secondary">
+                  <strong>统计口径：</strong>以下 5 项安全检查<strong>全部</strong>通过方为达标：
+                </Typography>
+                <Box className="mt-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-sm">
+                  {[
+                    '系统补丁 — 已更新至最新',
+                    '杀毒软件 — 运行中',
+                    '防火墙 — 已开启',
+                    '违规软件检测 — 未发现可疑程序',
+                    'USB 管控 — 合规',
+                  ].map((rule) => (
+                    <Typography key={rule} variant="caption" color="text.secondary">• {rule}</Typography>
+                  ))}
+                </Box>
+                <Typography variant="caption" color="text.secondary" className="block mt-1">
+                  ⚠️ 当前代码为随机 Mock（92% 概率达标），未对接真实安全检测数据。
+                </Typography>
+              </Box>
             </Box>
+            <Typography variant="body2" color="text.secondary" className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+              ⚠️ <strong>声明：</strong>目前四列数据均为前端 Mock 随机生成，未按上述统计口径做真实计算。
+              开发人员如需对接真实数据，应按上述规则实现各维度的判定函数，并替换 <code className="text-xs">networkOk / hardwareOk / smoothnessOk / securityOk</code> 的赋值逻辑。
+            </Typography>
           </section>
 
-          {/* ── 数据说明 ── */}
+          {/* ── 使用分析说明 ── */}
           <section>
-            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">ℹ️ 数据说明</Typography>
-            <Box className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-1">
-              <Typography variant="body2">• 当前页面所有数据均为前端模拟数据（Mock），刷新页面后数据会随机变化。</Typography>
-              <Typography variant="body2">• 阈值设置数据保存于浏览器 localStorage（key: <code className="text-blue-600">central-overview-thresholds</code>）。</Typography>
-              <Typography variant="body2">• 导出 CSV 功能导出当前设备列表全部数据，包含所有 13 列字段。</Typography>
-              <Typography variant="body2">• 页面为纯前端演示，不涉及真实后端 API 调用。</Typography>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">📈 使用分析说明</Typography>
+            <Box className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <Box>
+                <Typography variant="body2" className="font-medium mb-1">设备使用时间段分布 — 活跃次数</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  X 轴将一天 24 小时分为 12 个时间段（每 2 小时一段，如 0-2时、2-4时……22-24时）。
+                  Y 轴（活跃次数）为每个时间段内设备被使用的次数。
+                </Typography>
+                <Typography variant="body2" color="text.secondary" className="mt-1">
+                  <strong>当前为 Mock 模拟数据</strong>：高峰时段（6:00~20:00）生成 5~50 次随机数，
+                  非高峰时段（20:00~次日 6:00）生成 0~8 次随机数，无真实业务事件对应。
+                </Typography>
+              </Box>
+              <Box>
+                <Typography variant="body2" className="font-medium mb-1">"设备使用"的常见定义范围</Typography>
+                <Typography variant="body2" color="text.secondary" className="mb-1">
+                  在真实的教务管理系统中，"设备活跃/使用"通常包含以下范围：
+                </Typography>
+                <Box className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-100">
+                        <th className="text-left p-2 font-medium">事件类型</th>
+                        <th className="text-left p-2 font-medium">举例</th>
+                        <th className="text-left p-2 font-medium">常见度</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[
+                        ['设备开机 / 在线', '终端通电启动、网络心跳上报', '✅ 最基础'],
+                        ['用户登录', '教师/学生身份认证登录设备', '✅ 常见'],
+                        ['打开教学应用', '启动白板软件、教学资源平台', '✅ 常见'],
+                        ['教学系统操作', '进入云课堂、打开课件、录播等', '✅ 常见'],
+                      ].map(([type, example, freq]) => (
+                        <tr key={type} className="border-t border-gray-200">
+                          <td className="p-2 font-medium">{type}</td>
+                          <td className="p-2 text-gray-500">{example}</td>
+                          <td className="p-2">{freq}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </Box>
+                <Typography variant="body2" color="text.secondary" className="mt-1">
+                  目前页面为纯前端演示，活跃次数仅为随机模拟值，暂未对接真实业务事件统计。
+                </Typography>
+              </Box>
             </Box>
           </section>
 
@@ -995,14 +1099,26 @@ export default function CentralOverview() {
   return (
     <Box className="overflow-auto h-[calc(100vh-64px)] bg-gray-50">
       <Box className="p-4 sm:p-6">
-        {/* 标题区 */}
-        <Box className="mb-6">
-          <Typography variant="h5" className="font-bold">
-            集控总览
-          </Typography>
-          <Typography variant="body2" color="text.secondary" className="mt-1">
-            设备盘点与运行状态监控
-          </Typography>
+        {/* 标题区 + 操作按钮 */}
+        <Box className="mb-6 flex justify-between items-start">
+          <Box>
+            <Typography variant="h5" className="font-bold">
+              集控总览
+            </Typography>
+            <Typography variant="body2" color="text.secondary" className="mt-1">
+              设备盘点与运行状态监控
+            </Typography>
+          </Box>
+          <Box className="flex items-center gap-3 shrink-0">
+            <Button
+              variant="outlined"
+              size="small"
+              startIcon={<Settings />}
+              onClick={() => setThresholdDialogOpen(true)}
+            >
+              阈值设置
+            </Button>
+          </Box>
         </Box>
 
         {/* 概览卡片 */}
@@ -1010,26 +1126,6 @@ export default function CentralOverview() {
           {cardData.map((item) => (
             <StatCard key={item.title} {...item} />
           ))}
-        </Box>
-
-        {/* 操作栏 */}
-        <Box className="mb-4 flex items-center gap-3">
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<Settings />}
-            onClick={() => setThresholdDialogOpen(true)}
-          >
-            阈值设置
-          </Button>
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<Download />}
-            onClick={() => exportToCSV(devices, '设备数据.csv')}
-          >
-            导出数据
-          </Button>
         </Box>
 
         {/* 阈值设置弹窗 */}
@@ -1044,7 +1140,7 @@ export default function CentralOverview() {
         />
 
         {/* 筛选栏 */}
-        <Box className="mb-4 flex flex-wrap items-center gap-3">
+        <Box className="mb-4 flex flex-wrap items-center gap-3 w-full">
           <TextField
             size="small"
             placeholder="搜索设备名称或编号..."
@@ -1083,6 +1179,15 @@ export default function CentralOverview() {
           <Typography variant="caption" color="text.secondary">
             共 {filteredDevices.length} 台设备
           </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<Download />}
+            onClick={() => exportToCSV(devices, '设备数据.csv')}
+            className="ml-auto"
+          >
+            导出数据
+          </Button>
         </Box>
 
         {/* 设备表格 */}
