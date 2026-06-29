@@ -161,7 +161,7 @@ export default function SmartControl() {
     <Box className="overflow-auto h-[calc(100vh-64px)] bg-gray-50">
       <Box className="p-4 sm:p-6 max-w-6xl mx-auto">
         <Box className="mb-4">
-          <Typography variant="h5" className="font-bold">🧠 智慧管控</Typography>
+          <Typography variant="h5" className="font-bold">智慧管控</Typography>
           <Typography variant="body2" color="text.secondary" className="mt-1">
             统一管理教室终端的屏保、护眼和节能策略
           </Typography>
@@ -174,10 +174,7 @@ export default function SmartControl() {
             borderRadius: 3,
           }}>
             <Box className="flex items-center justify-between p-5 pb-0">
-              <Box className="flex items-center gap-2">
-                <Typography variant="h4" sx={{ lineHeight: 1 }}>🖥️</Typography>
-                <Typography variant="h6" className="font-bold">屏保管理</Typography>
-              </Box>
+              <Typography variant="h6" className="font-bold">屏保管理</Typography>
               <Switch size="medium" checked={screensaverConfig.enabled} onChange={() => toggleFeature('screensaver')} color="primary" />
             </Box>
             <CardContent className="p-5 pt-3">
@@ -249,10 +246,7 @@ export default function SmartControl() {
             borderRadius: 3,
           }}>
             <Box className="flex items-center justify-between p-5 pb-0">
-              <Box className="flex items-center gap-2">
-                <Typography variant="h4" sx={{ lineHeight: 1 }}>👁️</Typography>
-                <Typography variant="h6" className="font-bold">护眼管理</Typography>
-              </Box>
+              <Typography variant="h6" className="font-bold">护眼管理</Typography>
               <Switch size="medium" checked={eyeCare.enabled} onChange={() => toggleFeature('eye-care')} color="primary" />
             </Box>
             <CardContent className="p-5 pt-3">
@@ -336,10 +330,7 @@ export default function SmartControl() {
             borderRadius: 3,
           }}>
             <Box className="flex items-center justify-between p-5 pb-0">
-              <Box className="flex items-center gap-2">
-                <Typography variant="h4" sx={{ lineHeight: 1 }}>⚡</Typography>
-                <Typography variant="h6" className="font-bold">节能管理</Typography>
-              </Box>
+              <Typography variant="h6" className="font-bold">节能管理</Typography>
               <Switch size="medium" checked={energySaving.enabled} onChange={() => toggleFeature('energy-saving')} color="primary" />
             </Box>
             <CardContent className="p-5 pt-3">
