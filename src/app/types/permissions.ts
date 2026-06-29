@@ -143,6 +143,11 @@ export const ALL_PAGES: PageConfig[] = [
     buttons: [],
   },
   {
+    key: 'device-patrol',
+    label: '设备巡视',
+    buttons: [],
+  },
+  {
     key: 'device-mgmt',
     label: '设备管理',
     buttons: [

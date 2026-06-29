@@ -87,6 +87,7 @@ import OperationLog from './components/OperationLog';
 import AIImageProcessing from './components/AIImageProcessing';
 import SmartControl from './components/SmartControl';
 import NewsBroadcast from './components/NewsBroadcast';
+import DevicePatrol from './components/DevicePatrol';
 
 interface Template {
   id: string;
@@ -98,7 +99,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -291,6 +292,7 @@ export default function App() {
           id: 'central', label: '集控管理', icon: <MenuIcon />,
           children: [
             { id: 'central-overview', label: '总览', pageId: 'central-overview' },
+            { id: 'device-patrol', label: '设备巡视', pageId: 'device-patrol' },
             { id: 'news-broadcast', label: '时事转播', pageId: 'news-broadcast' },
             { id: 'classroom', label: '教室管理', pageId: 'classroom' },
             { id: 'device-mgmt', label: '设备管理', pageId: 'device-mgmt' },
@@ -409,6 +411,8 @@ export default function App() {
         <NewsBroadcast />
       ) : currentPage === 'central-overview' ? (
         <CentralOverview />
+      ) : currentPage === 'device-patrol' ? (
+        <DevicePatrol />
       ) : currentPage === 'device-mgmt' ? (
         <DeviceManagement />
       ) : currentPage === 'security-policy' ? (

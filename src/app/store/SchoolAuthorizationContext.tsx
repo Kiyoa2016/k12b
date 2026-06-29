@@ -17,7 +17,7 @@ const DEFAULT_SCHOOL_AUTHS: SchoolAuth[] = [
       'template', 'teacher', 'questionbank', 'lecture',
       'role-mgmt', 'voice-mgmt', 'cloudclassroom', 'cloudclassroom-review',
       'classroom', 'device-mgmt', 'livestream', 'info-publish',
-      'security-policy', 'operation-log', 'news-broadcast', 'central-overview',
+      'security-policy', 'operation-log', 'news-broadcast', 'central-overview', 'device-patrol',
       'training-video', 'training-video-mgmt',
     ],
   },
