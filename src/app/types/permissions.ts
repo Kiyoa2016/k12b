@@ -27,6 +27,13 @@ export interface Role {
   memberIds: string[]; // 教师 ID 列表
 }
 
+// 学校授权：云平台分配给学校的模块权限
+export interface SchoolAuth {
+  schoolId: string;
+  schoolName: string;
+  authorizedPageKeys: string[];
+}
+
 // 全系统页面配置（单一定义，保持和导航结构一致）
 export const ALL_PAGES: PageConfig[] = [
   {
@@ -174,6 +181,14 @@ export const ALL_PAGES: PageConfig[] = [
     ],
   },
   {
+    key: 'smart-control',
+    label: '智慧管控',
+    buttons: [
+      { key: 'toggle', label: '开启/关闭' },
+      { key: 'apply', label: '批量应用' },
+    ],
+  },
+  {
     key: 'news-broadcast',
     label: '时事转播',
     buttons: [
@@ -182,6 +197,18 @@ export const ALL_PAGES: PageConfig[] = [
       { key: 'delete', label: '删除' },
       { key: 'toggle-status', label: '启停' },
       { key: 'config-watermark', label: '水印设置' },
+    ],
+  },
+  {
+    key: 'ai-image',
+    label: 'AI 图片处理',
+    buttons: [
+      { key: 'upload', label: '上传图片' },
+      { key: 'optimize', label: '图片优化' },
+      { key: 'regenerate', label: '重新生成' },
+      { key: 'cutout', label: '智能抠图' },
+      { key: 'ocr', label: '提取文字' },
+      { key: 'download', label: '下载结果' },
     ],
   },
 ];

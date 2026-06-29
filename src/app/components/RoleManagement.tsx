@@ -35,8 +35,10 @@ import {
   Search,
   Close,
   Security,
+  School,
 } from '@mui/icons-material';
 import { usePermission } from '../store/PermissionContext';
+import { useSchoolAuthorization } from '../store/SchoolAuthorizationContext';
 import type { Role } from '../types/permissions';
 
 // 教师mock数据（与TeacherManagement保持一致）
@@ -63,6 +65,25 @@ const MOCK_TEACHERS: TeacherInfo[] = [
 
 interface Props {
   onEditPermissions: (role: Role) => void;
+}
+
+// ─── 学校上下文信息 ───
+
+function SchoolInfo() {
+  const { getSchoolAuth, currentSchoolId } = useSchoolAuthorization();
+  const auth = getSchoolAuth(currentSchoolId);
+
+  return (
+    <Box className="mt-2 flex items-center gap-1.5 bg-blue-50 rounded-lg px-2.5 py-1.5">
+      <School sx={{ fontSize: 14, color: '#3b82f6' }} />
+      <Typography variant="caption" color="text.secondary" className="font-medium" noWrap>
+        {auth?.schoolName || '未知学校'}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        · {auth?.authorizedPageKeys.length ?? 0} 模块
+      </Typography>
+    </Box>
+  );
 }
 
 export default function RoleManagement({ onEditPermissions }: Props) {
@@ -180,6 +201,7 @@ export default function RoleManagement({ onEditPermissions }: Props) {
           <Typography variant="h6" className="font-bold">
             角色管理
           </Typography>
+          <SchoolInfo />
         </Box>
         <Box className="flex-1 overflow-auto p-3 space-y-1">
           {sortedRoles.map((role) => (

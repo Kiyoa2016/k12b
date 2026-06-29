@@ -55,8 +55,8 @@ import {
   Mic,
   Dashboard,
   Devices,
-  Campaign,
   ReceiptLong,
+  AutoAwesome,
 } from '@mui/icons-material';
 import TeacherManagement from './components/TeacherManagement';
 import SchoolManagement from './components/SchoolManagement';
@@ -75,15 +75,17 @@ import TrainingVideoPlay from './components/TrainingVideoPlay';
 import TrainingVideoManagement from './components/TrainingVideoManagement';
 import type { TrainingVideo as TrainingVideoType } from './components/TrainingVideo';
 import { PermissionProvider } from './store/PermissionContext';
+import { SchoolAuthorizationProvider } from './store/SchoolAuthorizationContext';
 import RoleManagement from './components/RoleManagement';
 import PermissionConfig from './components/PermissionConfig';
 import type { Role } from './types/permissions';
 import VoiceManagement from './components/VoiceManagement';
 import CentralOverview from './components/CentralOverview';
 import DeviceManagement from './components/DeviceManagement';
-import InfoPublish from './components/InfoPublish';
 import SecurityPolicy from './components/SecurityPolicy';
 import OperationLog from './components/OperationLog';
+import AIImageProcessing from './components/AIImageProcessing';
+import SmartControl from './components/SmartControl';
 import NewsBroadcast from './components/NewsBroadcast';
 
 interface Template {
@@ -96,7 +98,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'info-publish' | 'security-policy' | 'operation-log'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -259,6 +261,12 @@ export default function App() {
             { id: 'training-video-mgmt', label: '培训视频管理', pageId: 'training-video-mgmt' },
           ],
         },
+        {
+          id: 'ai-module-parent', label: 'AI 模块', icon: <AutoAwesome />,
+          children: [
+            { id: 'ai-image', label: 'AI 图片处理', pageId: 'ai-image' },
+          ],
+        },
       ],
     },
     {
@@ -287,8 +295,8 @@ export default function App() {
             { id: 'classroom', label: '教室管理', pageId: 'classroom' },
             { id: 'device-mgmt', label: '设备管理', pageId: 'device-mgmt' },
             { id: 'livestream', label: '实时流', pageId: 'livestream' },
-            { id: 'info-publish', label: '信息发布', pageId: 'info-publish' },
             { id: 'security-policy', label: '安全策略', pageId: 'security-policy' },
+            { id: 'smart-control', label: '智慧管控', pageId: 'smart-control' },
             { id: 'operation-log', label: '运行日志', pageId: 'operation-log' },
           ],
         },
@@ -304,6 +312,7 @@ export default function App() {
 
   return (
     <PermissionProvider>
+    <SchoolAuthorizationProvider>
     <Box className="min-h-screen bg-gray-50">
       {/* 顶部导航栏 */}
       <AppBar position="static" elevation={0} className="bg-white border-b border-gray-200">
@@ -402,10 +411,10 @@ export default function App() {
         <CentralOverview />
       ) : currentPage === 'device-mgmt' ? (
         <DeviceManagement />
-      ) : currentPage === 'info-publish' ? (
-        <InfoPublish />
       ) : currentPage === 'security-policy' ? (
         <SecurityPolicy />
+      ) : currentPage === 'smart-control' ? (
+        <SmartControl />
       ) : currentPage === 'operation-log' ? (
         <OperationLog />
       ) : currentPage === 'classroom' ? (
@@ -425,6 +434,8 @@ export default function App() {
         <RoleManagement onEditPermissions={(role) => setConfigRole(role)} />
       ) : currentPage === 'voice-mgmt' ? (
         <VoiceManagement />
+      ) : currentPage === 'ai-image' ? (
+        <AIImageProcessing />
       ) : (
         <Container maxWidth="xl" className="py-8">
         {/* 标题栏 */}
@@ -771,6 +782,7 @@ export default function App() {
         />
       )}
     </Box>
+    </SchoolAuthorizationProvider>
     </PermissionProvider>
   );
 }

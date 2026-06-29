@@ -16,8 +16,9 @@ import {
   FormControl,
   Chip,
 } from '@mui/material';
-import { Close, Security } from '@mui/icons-material';
+import { Close, Security, School } from '@mui/icons-material';
 import { usePermission } from '../store/PermissionContext';
+import { useSchoolAuthorization } from '../store/SchoolAuthorizationContext';
 import { ALL_PAGES, type Role, type PagePermission } from '../types/permissions';
 
 interface Props {
@@ -39,6 +40,13 @@ export default function PermissionConfig({ role, open, onClose }: Props) {
   );
 
   const isSuperAdmin = role.isSystem;
+
+  // ── 学校授权过滤 ──
+  const { getSchoolAuth, currentSchoolId } = useSchoolAuthorization();
+  const schoolAuth = getSchoolAuth(currentSchoolId);
+  const availablePages = isSuperAdmin
+    ? ALL_PAGES
+    : ALL_PAGES.filter((p) => schoolAuth?.authorizedPageKeys.includes(p.key));
 
   const handleTogglePageAccess = (pageKey: string) => {
     setPermissions((prev) =>
@@ -167,7 +175,17 @@ export default function PermissionConfig({ role, open, onClose }: Props) {
           </Box>
         ) : (
           <Box className="space-y-6">
-            {ALL_PAGES.map((page) => {
+            {/* 学校授权提示 */}
+            {!isSuperAdmin && schoolAuth && (
+              <Box className="p-3 bg-blue-50 rounded-lg flex items-center gap-2 mb-4">
+                <School fontSize="small" className="text-blue-600" />
+                <Typography variant="body2" color="text.secondary">
+                  当前学校已授权 {schoolAuth.authorizedPageKeys.length}/{ALL_PAGES.length} 个功能模块，
+                  以下仅显示已授权的模块
+                </Typography>
+              </Box>
+            )}
+            {availablePages.map((page) => {
               const perm = permissions.find(
                 (p) => p.pageKey === page.key
               );
