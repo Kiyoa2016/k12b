@@ -12,6 +12,7 @@ import {
   Devices, CheckCircle, Cancel, Download, Settings,
   Search, Computer, Router, Security, Speed,
   MonitorHeart, BarChart, Timeline, Close, HelpOutline,
+  PowerSettingsNew, Warning,
 } from '@mui/icons-material';
 import {
   BarChart as ReBarChart, Bar, XAxis, YAxis,
@@ -84,20 +85,23 @@ interface Device {
 
 interface Thresholds {
   usageRate: number;
-  networkRate: number;
-  hardwareRate: number;
-  smoothnessRate: number;
   securityRate: number;
 }
 
 type DeviceStatus = 'all' | 'online' | 'offline' | 'abnormal';
 type ComplianceFilter = 'all' | 'all-pass' | 'has-fail';
 
+// ─── 时间范围类型 ───
+type TimeRangePreset = 'today' | 'yesterday' | 'last3' | 'last7' | 'custom';
+
+interface TimeRange {
+  preset: TimeRangePreset;
+  customStart?: string;  // ISO date string
+  customEnd?: string;    // ISO date string
+}
+
 const DEFAULT_THRESHOLDS: Thresholds = {
   usageRate: 60,
-  networkRate: 90,
-  hardwareRate: 90,
-  smoothnessRate: 85,
   securityRate: 95,
 };
 
@@ -222,6 +226,52 @@ function getDefaultThresholds(): Thresholds {
     if (saved) return JSON.parse(saved);
   } catch { /* ignore */ }
   return DEFAULT_THRESHOLDS;
+}
+
+// ─── 时间范围工具函数 ───
+function getDateRangeBounds(range: TimeRange): { start: Date; end: Date } {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(startOfToday.getTime() + 86400000); // 明天 00:00
+
+  switch (range.preset) {
+    case 'today':
+      return { start: startOfToday, end: endOfToday };
+    case 'yesterday': {
+      const start = new Date(startOfToday.getTime() - 86400000);
+      return { start, end: startOfToday };
+    }
+    case 'last3': {
+      const start = new Date(startOfToday.getTime() - 3 * 86400000);
+      return { start, end: endOfToday };
+    }
+    case 'last7':
+    default: {
+      const start = new Date(startOfToday.getTime() - 7 * 86400000);
+      return { start, end: endOfToday };
+    }
+    case 'custom': {
+      const start = range.customStart ? new Date(range.customStart) : startOfToday;
+      const end = range.customEnd ? new Date(range.customEnd + 'T23:59:59') : endOfToday;
+      return { start, end };
+    }
+  }
+}
+
+function isDeviceInRange(device: Device, range: TimeRange): boolean {
+  const { start, end } = getDateRangeBounds(range);
+  const lastActive = new Date(device.lastActive);
+  return lastActive >= start && lastActive < end;
+}
+
+function formatPresetLabel(preset: TimeRangePreset): string {
+  switch (preset) {
+    case 'today': return '今天';
+    case 'yesterday': return '昨天';
+    case 'last3': return '近 3 天';
+    case 'last7': return '近 7 天';
+    case 'custom': return '自定义';
+  }
 }
 
 // ─── InfoRow 组件 ───
@@ -611,17 +661,93 @@ function StatCard({
   );
 }
 
+// ─── 时间范围选择器组件 ───
+function TimeRangeSelector({
+  value, onChange,
+}: {
+  value: TimeRange;
+  onChange: (range: TimeRange) => void;
+}) {
+  const presets: { key: TimeRangePreset; label: string }[] = [
+    { key: 'today', label: '今天' },
+    { key: 'yesterday', label: '昨天' },
+    { key: 'last3', label: '近 3 天' },
+    { key: 'last7', label: '近 7 天' },
+    { key: 'custom', label: '自定义' },
+  ];
+
+  const handleCustomStartChange = (val: string) => {
+    onChange({ ...value, customStart: val || undefined });
+  };
+  const handleCustomEndChange = (val: string) => {
+    onChange({ ...value, customEnd: val || undefined });
+  };
+
+  return (
+    <Box className="flex items-center gap-2 flex-wrap">
+      <Typography variant="caption" color="text.secondary" className="whitespace-nowrap font-medium">
+        统计时间：
+      </Typography>
+      <Box className="flex gap-0.5">
+        {presets.map((p) => (
+          <Button
+            key={p.key}
+            size="small"
+            variant={value.preset === p.key ? 'contained' : 'text'}
+            onClick={() => onChange({ preset: p.key, customStart: value.customStart, customEnd: value.customEnd })}
+            sx={{
+              minWidth: 56,
+              px: 1.2,
+              fontSize: 12,
+              fontWeight: value.preset === p.key ? 600 : 400,
+              borderRadius: 2,
+              color: value.preset === p.key ? '#fff' : 'text.secondary',
+              backgroundColor: value.preset === p.key ? '#3b82f6' : 'transparent',
+              '&:hover': value.preset === p.key ? { backgroundColor: '#2563eb' } : { backgroundColor: '#f3f4f6' },
+            }}
+          >
+            {p.label}
+          </Button>
+        ))}
+      </Box>
+      {value.preset === 'custom' && (
+        <Box className="flex items-center gap-2 ml-1">
+          <TextField
+            type="date"
+            size="small"
+            label="开始日期"
+            value={value.customStart || ''}
+            onChange={(e) => handleCustomStartChange(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true, sx: { fontSize: 12 } } }}
+            sx={{ '& input': { fontSize: 13, width: 120 } }}
+          />
+          <Typography variant="caption" color="text.secondary">至</Typography>
+          <TextField
+            type="date"
+            size="small"
+            label="结束日期"
+            value={value.customEnd || ''}
+            onChange={(e) => handleCustomEndChange(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true, sx: { fontSize: 12 } } }}
+            sx={{ '& input': { fontSize: 13, width: 120 } }}
+          />
+        </Box>
+      )}
+    </Box>
+  );
+}
+
 // ─── 概览数据聚合 ───
-function computeOverviewStats(devices: Device[], thresholds: Thresholds) {
+function computeOverviewStats(devices: Device[], thresholds: Thresholds, timeRange: TimeRange) {
   const total = devices.length;
-  const activeRecent = devices.filter((d) => {
+  const inRangeDevices = devices.filter((d) => isDeviceInRange(d, timeRange));
+  const activeCount = inRangeDevices.filter((d) => d.status === 'online').length;
+  const abnormalCount = inRangeDevices.filter((d) => d.status === 'abnormal').length;
+  const activeRecent = inRangeDevices.filter((d) => {
     if (d.status === 'offline') return false;
     return Date.now() - new Date(d.lastActive).getTime() < 604800000; // 7 days
   }).length;
   const usageRate = Math.round((activeRecent / total) * 100);
-  const networkRate = Math.round((devices.filter((d) => d.networkOk).length / total) * 100);
-  const hardwareRate = Math.round((devices.filter((d) => d.hardwareOk).length / total) * 100);
-  const smoothnessRate = Math.round((devices.filter((d) => d.smoothnessOk).length / total) * 100);
   const securityRate = Math.round((devices.filter((d) => d.securityOk).length / total) * 100);
 
   const rateColor = (rate: number, threshold: number): string => {
@@ -632,11 +758,9 @@ function computeOverviewStats(devices: Device[], thresholds: Thresholds) {
 
   return {
     total, activeRecent,
-    usageRate, networkRate, hardwareRate, smoothnessRate, securityRate,
+    activeCount, abnormalCount,
+    usageRate, securityRate,
     usageColor: rateColor(usageRate, thresholds.usageRate),
-    networkColor: rateColor(networkRate, thresholds.networkRate),
-    hardwareColor: rateColor(hardwareRate, thresholds.hardwareRate),
-    smoothnessColor: rateColor(smoothnessRate, thresholds.smoothnessRate),
     securityColor: rateColor(securityRate, thresholds.securityRate),
   };
 }
@@ -658,9 +782,6 @@ function ThresholdDialog({
 
   const fields: { key: keyof Thresholds; label: string; desc: string }[] = [
     { key: 'usageRate', label: '设备使用率阈值', desc: '低于此值视为使用率偏低' },
-    { key: 'networkRate', label: '网络达标率阈值', desc: '低于此值标记为网络不达标' },
-    { key: 'hardwareRate', label: '硬件达标率阈值', desc: '低于此值标记为硬件不达标' },
-    { key: 'smoothnessRate', label: '流畅度达标率阈值', desc: '低于此值标记为流畅度不达标' },
     { key: 'securityRate', label: '安全达标率阈值', desc: '低于此值标记为安全不达标' },
   ];
 
@@ -741,15 +862,14 @@ function exportToCSV(devices: Device[], filename: string) {
   const headers = [
     '设备名称', '设备编号', '位置', '状态', '最近活跃',
     '上行网速(Mbps)', '下行网速(Mbps)', '流入流量(MB)', '流出流量(MB)',
-    '网络达标', '硬件达标', '流畅度达标', '安全达标',
+    '安全达标',
   ];
   const rows = devices.map((d) => [
     escapeCSV(d.name), escapeCSV(d.code), escapeCSV(d.room),
     d.status === 'online' ? '在线' : d.status === 'offline' ? '离线' : '异常',
     d.lastActive,
     String(d.uploadSpeed), String(d.downloadSpeed), String(d.inboundTraffic), String(d.outboundTraffic),
-    d.networkOk ? '是' : '否', d.hardwareOk ? '是' : '否',
-    d.smoothnessOk ? '是' : '否', d.securityOk ? '是' : '否',
+    d.securityOk ? '是' : '否',
   ]);
   const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -784,10 +904,9 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
             <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">📊 指标计算规则</Typography>
             <Box className="bg-blue-50 rounded-lg p-4 space-y-2">
               <MetricRule label="监管设备数" rule="系统管理所有教室终端设备的总数量，合计 17 台。" />
-              <MetricRule label="设备使用率" rule="最近 7 天有活跃记录的设备数 ÷ 总设备数 × 100%。活跃记录指设备在 7 天内有在线状态变更或心跳上报。" />
-              <MetricRule label="网络达标率" rule="网络连接状态正常的设备数 ÷ 总设备数 × 100%。基于设备上次上报的网络连通性检测结果。" />
-              <MetricRule label="硬件达标率" rule="CPU 使用率 ≤ 80%、CPU 温度 ≤ 75°C、内存大小 ≥ 4GB、内存使用率 ≤ 80%、系统盘使用率 ≤ 85%、数据盘使用率 ≤ 85% 且外设（音响/麦克风/摄像头）全部正常的设备数 ÷ 总设备数 × 100%。" />
-              <MetricRule label="流畅度达标率" rule="系统资源占用在合理范围内的设备数 ÷ 总设备数 × 100%。反映设备运行流畅程度。" />
+              <MetricRule label="开机设备数" rule="当前处于开机/在线状态的设备数量。设备与服务器保持连接并按周期上报心跳即为开机状态。" />
+              <MetricRule label="异常设备数" rule="设备在线但存在异常状态（如 CPU 过热、磁盘空间不足、进程无响应等）的数量，需及时处理。" />
+              <MetricRule label="设备使用率" rule="所选时间范围内有活跃记录的设备数 ÷ 总设备数 × 100%。活跃记录指设备在统计周期内有在线状态变更或心跳上报。" />
               <MetricRule label="安全达标率" rule="系统补丁、杀毒软件、防火墙、违规软件检测、USB 管控五项安全检查全部通过的设备数 ÷ 总设备数 × 100%。" />
             </Box>
           </section>
@@ -795,6 +914,9 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
           {/* ── 达标颜色规则 ── */}
           <section>
             <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">🎨 达标颜色规则</Typography>
+            <Typography variant="body2" color="text.secondary" className="mb-2">
+              适用于「设备使用率」和「安全达标率」两项百分比指标的阈值颜色判断：
+            </Typography>
             <Box className="bg-gray-50 rounded-lg p-4">
               <Box className="grid grid-cols-3 gap-4">
                 <Box className="text-center p-3 bg-white rounded-lg border border-green-200">
@@ -816,9 +938,42 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
             </Box>
           </section>
 
+          {/* ── 时间范围统计说明 ── */}
+          <section>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">⏱️ 时间范围统计</Typography>
+            <Box className="bg-gray-50 rounded-lg p-4 space-y-3">
+              <Typography variant="body2" color="text.secondary">
+                页面顶部的时间范围选择器支持按不同时段筛选数据，影响概览卡片中的统计结果和设备列表的显示范围：
+              </Typography>
+              <Box className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {[
+                  { label: '今天', desc: '当日 00:00 至当前时间范围内有活跃记录的设备数据' },
+                  { label: '昨天', desc: '昨日 00:00 至今日 00:00 范围内有活跃记录的设备数据' },
+                  { label: '近 3 天', desc: '从 3 天前 00:00 至今的统计范围' },
+                  { label: '近 7 天', desc: '从 7 天前 00:00 至今的统计范围' },
+                  { label: '自定义', desc: '手动选择起始和结束日期，灵活查看任意时间段的统计' },
+                ].map(({ label, desc }) => (
+                  <Box key={label} className="bg-white rounded-lg border border-gray-200 p-3">
+                    <Typography variant="body2" className="font-medium text-blue-700 mb-0.5">{label}</Typography>
+                    <Typography variant="caption" color="text.secondary">{desc}</Typography>
+                  </Box>
+                ))}
+              </Box>
+              <Typography variant="body2" color="text.secondary" className="mt-1">
+                <strong>统计口径说明：</strong>设备是否计入统计范围由其「最近活跃时间」决定。如果设备的最近活跃时间落在所选时间范围内，则该设备的数据纳入统计。设备列表会同步过滤，只显示所选时间范围内有活跃记录的设备。
+              </Typography>
+              <Typography variant="caption" color="text.secondary" className="block p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                ⚠️ 当前为 Mock 模拟数据，设备的最近活跃时间在生成时固定在最近 72 小时内随机分布。切换时间范围时，活跃时间不在范围内的设备将被过滤。
+              </Typography>
+            </Box>
+          </section>
+
           {/* ── 阈值默认值 ── */}
           <section>
             <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">⚙️ 阈值默认值与设置</Typography>
+            <Typography variant="body2" color="text.secondary" className="mb-2">
+              当前只有「设备使用率」和「安全达标率」涉及阈值判断，开机设备数和异常设备数为数量型指标，不适用百分比阈值。
+            </Typography>
             <Box className="bg-gray-50 rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -831,9 +986,6 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <tbody>
                   {[
                     ['设备使用率', '60%', '低于此值视为使用率偏低'],
-                    ['网络达标率', '90%', '低于此值标记为网络不达标'],
-                    ['硬件达标率', '90%', '低于此值标记为硬件不达标'],
-                    ['流畅度达标率', '85%', '低于此值标记为流畅度不达标'],
                     ['安全达标率', '95%', '低于此值标记为安全不达标'],
                   ].map(([label, def, desc]) => (
                     <tr key={label} className="border-t border-gray-200">
@@ -871,10 +1023,10 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
 
           {/* ── 达标列统计说明 ── */}
           <section>
-            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">✅ 设备列表 4 项达标列说明</Typography>
+            <Typography variant="subtitle1" className="font-bold text-blue-700 mb-2">✅ 设备列表达标列说明</Typography>
             <Typography variant="body2" color="text.secondary" className="mb-2">
               设备列表中的「网络」「硬件」「流畅度」「安全」四列显示每台设备各项是否达标，
-              绿色 ✓ 表示达标，红色 ✗ 表示不达标。各列的统计口径如下：
+              绿色 ✓ 表示达标，红色 ✗ 表示不达标。这些为设备级的细粒度标志，与顶部概览卡片中的汇总指标（如安全达标率）对应。各列的统计口径如下：
             </Typography>
             <Box className="space-y-3">
               <Box className="bg-white border border-green-200 rounded-lg p-3">
@@ -946,8 +1098,8 @@ function HelpDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
               </Box>
             </Box>
             <Typography variant="body2" color="text.secondary" className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-              ⚠️ <strong>声明：</strong>目前四列数据均为前端 Mock 随机生成，未按上述统计口径做真实计算。
-              开发人员如需对接真实数据，应按上述规则实现各维度的判定函数，并替换 <code className="text-xs">networkOk / hardwareOk / smoothnessOk / securityOk</code> 的赋值逻辑。
+              ⚠️ <strong>声明：</strong>目前设备列表中的网络、硬件、流畅度三列数据均为前端 Mock 随机生成，未按上述统计口径做真实计算。
+              安全达标列已按规则实现逐项判定（Mock 概率模式）。开发人员如需对接真实数据，应按上述规则实现各维度的判定函数。
             </Typography>
           </section>
 
@@ -1033,8 +1185,9 @@ export default function CentralOverview() {
   const [detailDevice, setDetailDevice] = useState<Device | null>(null);
   const [detailTab, setDetailTab] = useState(0);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [timeRange, setTimeRange] = useState<TimeRange>({ preset: 'today' });
 
-  const stats = useMemo(() => computeOverviewStats(devices, thresholds), [devices, thresholds]);
+  const stats = useMemo(() => computeOverviewStats(devices, thresholds, timeRange), [devices, thresholds, timeRange]);
 
   const filteredDevices = useMemo(() => {
     return devices.filter((d) => {
@@ -1067,25 +1220,18 @@ export default function CentralOverview() {
       color: stats.usageColor, bgClass: 'bg-green-50',
     },
     {
-      icon: <Router sx={{ fontSize: 32 }} />, title: '网络达标率',
-      value: stats.networkRate, unit: '%',
-      numerator: devices.filter(d => d.networkOk).length,
+      icon: <PowerSettingsNew sx={{ fontSize: 32 }} />, title: '开机设备数',
+      value: stats.activeCount, unit: '台',
+      numerator: stats.activeCount,
       denominator: stats.total,
-      color: stats.networkColor, bgClass: 'bg-blue-50',
+      color: '#22c55e', bgClass: 'bg-green-50',
     },
     {
-      icon: <Computer sx={{ fontSize: 32 }} />, title: '硬件达标率',
-      value: stats.hardwareRate, unit: '%',
-      numerator: devices.filter(d => d.hardwareOk).length,
+      icon: <Warning sx={{ fontSize: 32 }} />, title: '异常设备数',
+      value: stats.abnormalCount, unit: '台',
+      numerator: stats.abnormalCount,
       denominator: stats.total,
-      color: stats.hardwareColor, bgClass: 'bg-purple-50',
-    },
-    {
-      icon: <Speed sx={{ fontSize: 32 }} />, title: '流畅度达标率',
-      value: stats.smoothnessRate, unit: '%',
-      numerator: devices.filter(d => d.smoothnessOk).length,
-      denominator: stats.total,
-      color: stats.smoothnessColor, bgClass: 'bg-orange-50',
+      color: '#ef4444', bgClass: 'bg-red-50',
     },
     {
       icon: <Security sx={{ fontSize: 32 }} />, title: '安全达标率',
@@ -1106,7 +1252,7 @@ export default function CentralOverview() {
               集控总览
             </Typography>
             <Typography variant="body2" color="text.secondary" className="mt-1">
-              设备盘点与运行状态监控
+              设备数量、开机状态、异常监控与安全达标概览
             </Typography>
           </Box>
           <Box className="flex items-center gap-3 shrink-0">
@@ -1121,8 +1267,13 @@ export default function CentralOverview() {
           </Box>
         </Box>
 
+        {/* 时间范围选择 */}
+        <Box className="mb-4">
+          <TimeRangeSelector value={timeRange} onChange={(r) => { setTimeRange(r); setPage(0); }} />
+        </Box>
+
         {/* 概览卡片 */}
-        <Box className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
+        <Box className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
           {cardData.map((item) => (
             <StatCard key={item.title} {...item} />
           ))}
@@ -1202,17 +1353,13 @@ export default function CentralOverview() {
                   <TableCell sx={{ fontWeight: 600, minWidth: 180 }}>所属位置</TableCell>
                   <TableCell sx={{ fontWeight: 600, width: 70 }}>状态</TableCell>
                   <TableCell sx={{ fontWeight: 600, minWidth: 130 }}>最近活跃</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 72 }}>网络</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 72 }}>硬件</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 72 }}>流畅度</TableCell>
-                  <TableCell sx={{ fontWeight: 600, width: 72 }}>安全</TableCell>
                   <TableCell sx={{ fontWeight: 600, width: 90 }}>操作</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {pagedDevices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                       <Typography variant="body2" color="text.secondary">未找到匹配的设备</Typography>
                     </TableCell>
                   </TableRow>
@@ -1243,30 +1390,6 @@ export default function CentralOverview() {
                       </TableCell>
                       <TableCell>
                         <Typography variant="caption" color="text.secondary">{device.lastActive}</Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        {device.networkOk
-                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
-                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
-                        }
-                      </TableCell>
-                      <TableCell align="center">
-                        {device.hardwareOk
-                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
-                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
-                        }
-                      </TableCell>
-                      <TableCell align="center">
-                        {device.smoothnessOk
-                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
-                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
-                        }
-                      </TableCell>
-                      <TableCell align="center">
-                        {device.securityOk
-                          ? <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
-                          : <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
-                        }
                       </TableCell>
                       <TableCell>
                         <Button
