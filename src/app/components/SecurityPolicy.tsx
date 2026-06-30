@@ -7,13 +7,15 @@ import {
   TableHead, TableRow,
   Select, MenuItem, FormControl, FormControlLabel,
   Checkbox, Switch, LinearProgress, Alert,
-  Paper, Tooltip,
+  Paper, Tooltip, Slider,
 } from '@mui/material';
 import {
   CleaningServices, FolderOpen, Warning, Mic,
   Computer, CheckCircle, Close,
   VideoFile, Image, MusicNote, Description,
   Download, Upload, Preview,
+  Public, Speed, Add, Delete, Group,
+  CloudOff, Storage, Schedule,
 } from '@mui/icons-material';
 
 // ─── 类型定义 ───
@@ -689,6 +691,349 @@ function AudioTranscribePanel() {
   );
 }
 
+// ─── Tab 5: 弹窗拦截 ───
+function PopupBlockPanel() {
+  const [enabled, setEnabled] = useState(true);
+  const [mode, setMode] = useState<'whitelist' | 'blacklist'>('whitelist');
+  const [whitelist, setWhitelist] = useState([
+    { id: '1', name: '白板教学系统', url: 'whiteboard.edu.cn', desc: '核心教学应用' },
+    { id: '2', name: '资源中心', url: 'resource.edu.cn', desc: '教学资源下载' },
+  ]);
+  const [blacklist, setBlacklist] = useState([
+    { id: 'b1', name: '广告弹窗', url: '*.ad-*.com', desc: '第三方广告推送' },
+  ]);
+  const [newApp, setNewApp] = useState({ name: '', url: '', desc: '' });
+  const [editingList, setEditingList] = useState<'whitelist' | 'blacklist'>('whitelist');
+
+  const currentList = editingList === 'whitelist' ? whitelist : blacklist;
+  const setCurrentList = editingList === 'whitelist' ? setWhitelist : setBlacklist;
+
+  const handleAddApp = () => {
+    if (!newApp.name.trim() || !newApp.url.trim()) return;
+    setCurrentList((prev) => [...prev, { ...newApp, id: `${editingList[0]}${Date.now()}` }]);
+    setNewApp({ name: '', url: '', desc: '' });
+  };
+
+  const handleRemoveApp = (id: string) => {
+    setCurrentList((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  return (
+    <Box>
+      <Box className="flex items-center justify-between mb-4">
+        <Box>
+          <Typography variant="body2" className="font-medium">弹窗拦截</Typography>
+          <Typography variant="caption" color="text.secondary">
+            自动拦截白板端非白名单应用的弹窗广告和通知推送
+          </Typography>
+        </Box>
+        <Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+      </Box>
+
+      {enabled && (
+        <>
+          <Box className="flex gap-2 mb-4">
+            <Chip label="白名单模式" onClick={() => setEditingList('whitelist')}
+              color={editingList === 'whitelist' ? 'primary' : 'default'}
+              variant={editingList === 'whitelist' ? 'filled' : 'outlined'} />
+            <Chip label="黑名单模式" onClick={() => setEditingList('blacklist')}
+              color={editingList === 'blacklist' ? 'primary' : 'default'}
+              variant={editingList === 'blacklist' ? 'filled' : 'outlined'} />
+            <FormControl size="small" sx={{ minWidth: 140, ml: 'auto' }}>
+              <Select value={mode} onChange={(e) => setMode(e.target.value as 'whitelist' | 'blacklist')}>
+                <MenuItem value="whitelist">仅允许白名单应用</MenuItem>
+                <MenuItem value="blacklist">禁止黑名单应用</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          <Box className="mb-4">
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', fontSize: 11, mb: 1, display: 'block' }}>
+              {editingList === 'whitelist' ? '白名单' : '黑名单'}
+            </Typography>
+            <Box className="space-y-2 mb-3">
+              {currentList.map((item) => (
+                <Box key={item.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100">
+                  <CloudOff sx={{ fontSize: 18, color: '#6b7280' }} />
+                  <Box className="flex-1 min-w-0">
+                    <Typography variant="body2" className="font-medium">{item.name}</Typography>
+                    <Box className="flex gap-2">
+                      <Typography variant="caption" color="text.secondary">{item.url}</Typography>
+                      <Typography variant="caption" color="text.disabled">|</Typography>
+                      <Typography variant="caption" color="text.secondary">{item.desc}</Typography>
+                    </Box>
+                  </Box>
+                  <IconButton size="small" onClick={() => handleRemoveApp(item.id)}>
+                    <Delete fontSize="small" />
+                  </IconButton>
+                </Box>
+              ))}
+              {currentList.length === 0 && (
+                <Typography variant="caption" color="text.secondary" className="text-center block py-4">
+                  暂无数据，请添加{editingList === 'whitelist' ? '白名单' : '黑名单'}
+                </Typography>
+              )}
+            </Box>
+
+            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', fontSize: 11, mb: 1, display: 'block' }}>
+                添加应用
+              </Typography>
+              <Box className="flex gap-2 mb-2">
+                <TextField size="small" placeholder="应用名称" value={newApp.name}
+                  onChange={(e) => setNewApp({ ...newApp, name: e.target.value })} sx={{ flex: 1 }} />
+                <TextField size="small" placeholder="URL/域名" value={newApp.url}
+                  onChange={(e) => setNewApp({ ...newApp, url: e.target.value })} sx={{ flex: 1 }} />
+              </Box>
+              <Box className="flex gap-2">
+                <TextField size="small" placeholder="备注说明" value={newApp.desc}
+                  onChange={(e) => setNewApp({ ...newApp, desc: e.target.value })} sx={{ flex: 1 }} />
+                <Button variant="contained" size="small" startIcon={<Add />}
+                  onClick={handleAddApp} disabled={!newApp.name.trim() || !newApp.url.trim()}>
+                  添加
+                </Button>
+              </Box>
+            </Paper>
+          </Box>
+        </>
+      )}
+    </Box>
+  );
+}
+
+// ─── Tab 6: 网址过滤 ───
+function UrlFilterPanel() {
+  const [enabled, setEnabled] = useState(false);
+  const [filterMode, setFilterMode] = useState<'whitelist' | 'blacklist'>('whitelist');
+  const [whitelist, setWhitelist] = useState([
+    { id: 'w1', url: '*.edu.cn', desc: '教育类网站' },
+    { id: 'w2', url: 'xiaoyuan.baidu.com', desc: '百度校园' },
+  ]);
+  const [blacklist, setBlacklist] = useState([
+    { id: 'b1', url: '*.game.com', desc: '游戏网站' },
+    { id: 'b2', url: '*.youtube.com', desc: '视频网站' },
+  ]);
+  const [deviceGroups] = useState([
+    { id: 'g1', name: '全部教室', count: 30 },
+    { id: 'g2', name: '一年级教室', count: 8 },
+    { id: 'g3', name: '二年级教室', count: 6 },
+  ]);
+  const [selectedGroup, setSelectedGroup] = useState('g1');
+  const [newUrl, setNewUrl] = useState({ url: '', desc: '' });
+  const [editingList, setEditingList] = useState<'whitelist' | 'blacklist'>('whitelist');
+
+  const currentList = editingList === 'whitelist' ? whitelist : blacklist;
+  const setCurrentList = editingList === 'whitelist' ? setWhitelist : setBlacklist;
+
+  const handleAddUrl = () => {
+    if (!newUrl.url.trim()) return;
+    setCurrentList((prev) => [...prev, { ...newUrl, id: `${editingList[0]}${Date.now()}` }]);
+    setNewUrl({ url: '', desc: '' });
+  };
+
+  const handleRemoveUrl = (id: string) => {
+    setCurrentList((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  return (
+    <Box>
+      <Box className="flex items-center justify-between mb-4">
+        <Box>
+          <Typography variant="body2" className="font-medium">网址过滤</Typography>
+          <Typography variant="caption" color="text.secondary">
+            配置白板浏览器的URL访问策略
+          </Typography>
+        </Box>
+        <Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+      </Box>
+
+      {enabled && (
+        <>
+          <Box className="flex items-center gap-3 mb-4">
+            <FormControl size="small" sx={{ minWidth: 160 }}>
+              <Select value={filterMode} onChange={(e) => setFilterMode(e.target.value as 'whitelist' | 'blacklist')}>
+                <MenuItem value="whitelist">仅允许访问白名单网址</MenuItem>
+                <MenuItem value="blacklist">禁止访问黑名单网址</MenuItem>
+              </Select>
+            </FormControl>
+            <Box className="flex items-center gap-1 ml-auto">
+              <Group sx={{ fontSize: 16, color: '#6b7280' }} />
+              <FormControl size="small" sx={{ minWidth: 120 }}>
+                <Select value={selectedGroup} onChange={(e) => setSelectedGroup(e.target.value)}>
+                  {deviceGroups.map((g) => (
+                    <MenuItem key={g.id} value={g.id}>{g.name} ({g.count}台)</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
+          </Box>
+
+          <Box className="flex gap-2 mb-4">
+            <Chip label="白名单" onClick={() => setEditingList('whitelist')}
+              color={editingList === 'whitelist' ? 'primary' : 'default'}
+              variant={editingList === 'whitelist' ? 'filled' : 'outlined'} />
+            <Chip label="黑名单" onClick={() => setEditingList('blacklist')}
+              color={editingList === 'blacklist' ? 'primary' : 'default'}
+              variant={editingList === 'blacklist' ? 'filled' : 'outlined'} />
+          </Box>
+
+          <Box className="space-y-2 mb-4">
+            {currentList.map((item) => (
+              <Box key={item.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50 border border-gray-100">
+                <Public sx={{ fontSize: 18, color: '#6b7280' }} />
+                <Box className="flex-1 min-w-0">
+                  <Typography variant="body2" className="font-medium">{item.url}</Typography>
+                  <Typography variant="caption" color="text.secondary">{item.desc}</Typography>
+                </Box>
+                <IconButton size="small" onClick={() => handleRemoveUrl(item.id)}>
+                  <Delete fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+            {currentList.length === 0 && (
+              <Typography variant="caption" color="text.secondary" className="text-center block py-4">
+                暂无数据，请添加{editingList === 'whitelist' ? '白名单' : '黑名单'}
+              </Typography>
+            )}
+          </Box>
+
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+            <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', fontSize: 11, mb: 1, display: 'block' }}>
+              添加网址
+            </Typography>
+            <Box className="flex gap-2">
+              <TextField size="small" placeholder="网址/域名，支持通配符 *.example.com" value={newUrl.url}
+                onChange={(e) => setNewUrl({ ...newUrl, url: e.target.value })} sx={{ flex: 1 }} />
+              <TextField size="small" placeholder="备注" value={newUrl.desc}
+                onChange={(e) => setNewUrl({ ...newUrl, desc: e.target.value })} sx={{ width: 200 }} />
+              <Button variant="contained" size="small" startIcon={<Add />}
+                onClick={handleAddUrl} disabled={!newUrl.url.trim()}>
+                添加
+              </Button>
+            </Box>
+          </Paper>
+        </>
+      )}
+    </Box>
+  );
+}
+
+// ─── Tab 7: 流量管控 ───
+function TrafficControlPanel() {
+  const [enabled, setEnabled] = useState(false);
+  const [uploadLimit, setUploadLimit] = useState(10);
+  const [downloadLimit, setDownloadLimit] = useState(50);
+  const [trafficQuota, setTrafficQuota] = useState(100);
+  const [peakHourEnabled, setPeakHourEnabled] = useState(true);
+  const [peakUploadLimit, setPeakUploadLimit] = useState(5);
+  const [peakDownloadLimit, setPeakDownloadLimit] = useState(20);
+  const [peakStart, setPeakStart] = useState('08:00');
+  const [peakEnd, setPeakEnd] = useState('16:00');
+  const [quotaUnit, setQuotaUnit] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
+
+  return (
+    <Box>
+      <Box className="flex items-center justify-between mb-4">
+        <Box>
+          <Typography variant="body2" className="font-medium">流量管控</Typography>
+          <Typography variant="caption" color="text.secondary">
+            限制白板设备的上传/下载带宽和流量配额，不影响教室其他网络设备
+          </Typography>
+        </Box>
+        <Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+      </Box>
+
+      {enabled && (
+        <>
+          {/* 带宽限制 */}
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+            <Box className="flex items-center gap-1 mb-3">
+              <Speed sx={{ fontSize: 18, color: '#3b82f6' }} />
+              <Typography variant="body2" className="font-medium">带宽限制</Typography>
+            </Box>
+
+            <Box className="mb-3">
+              <Box className="flex items-center justify-between mb-1">
+                <Typography variant="caption" className="font-medium">上传限速</Typography>
+                <Typography variant="caption" color="primary" sx={{ fontWeight: 700 }}>{uploadLimit} Mbps</Typography>
+              </Box>
+              <Slider value={uploadLimit} onChange={(_, v) => setUploadLimit(v as number)}
+                min={1} max={100} step={1} valueLabelDisplay="auto" valueLabelFormat={(v) => `${v} Mbps`} />
+            </Box>
+
+            <Box className="mb-1">
+              <Box className="flex items-center justify-between mb-1">
+                <Typography variant="caption" className="font-medium">下载限速</Typography>
+                <Typography variant="caption" color="primary" sx={{ fontWeight: 700 }}>{downloadLimit} Mbps</Typography>
+              </Box>
+              <Slider value={downloadLimit} onChange={(_, v) => setDownloadLimit(v as number)}
+                min={1} max={500} step={1} valueLabelDisplay="auto" valueLabelFormat={(v) => `${v} Mbps`} />
+            </Box>
+          </Paper>
+
+          {/* 流量配额 */}
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, mb: 3 }}>
+            <Box className="flex items-center gap-1 mb-3">
+              <Storage sx={{ fontSize: 18, color: '#10b981' }} />
+              <Typography variant="body2" className="font-medium">流量配额</Typography>
+            </Box>
+
+            <Box className="mb-2">
+              <Box className="flex items-center justify-between mb-1">
+                <Typography variant="caption" className="font-medium">每月流量上限</Typography>
+                <Typography variant="caption" color="primary" sx={{ fontWeight: 700 }}>{trafficQuota} GB</Typography>
+              </Box>
+              <Slider value={trafficQuota} onChange={(_, v) => setTrafficQuota(v as number)}
+                min={10} max={1000} step={10} valueLabelDisplay="auto" valueLabelFormat={(v) => `${v} GB`} />
+            </Box>
+          </Paper>
+
+          {/* 高峰时段限速 */}
+          <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
+            <Box className="flex items-center justify-between mb-3">
+              <Box className="flex items-center gap-1">
+                <Schedule sx={{ fontSize: 18, color: '#f59e0b' }} />
+                <Typography variant="body2" className="font-medium">高峰时段（上课时间）限速</Typography>
+              </Box>
+              <Switch size="small" checked={peakHourEnabled} onChange={(e) => setPeakHourEnabled(e.target.checked)} />
+            </Box>
+
+            {peakHourEnabled && (
+              <>
+                <Box className="flex items-center gap-3 mb-3">
+                  <TextField size="small" type="time" label="开始时间" value={peakStart}
+                    onChange={(e) => setPeakStart(e.target.value)} sx={{ width: 140 }} />
+                  <Typography variant="body2">至</Typography>
+                  <TextField size="small" type="time" label="结束时间" value={peakEnd}
+                    onChange={(e) => setPeakEnd(e.target.value)} sx={{ width: 140 }} />
+                </Box>
+
+                <Box className="mb-2">
+                  <Box className="flex items-center justify-between mb-1">
+                    <Typography variant="caption" className="font-medium">高峰上传限速</Typography>
+                    <Typography variant="caption" color="error" sx={{ fontWeight: 700 }}>{peakUploadLimit} Mbps</Typography>
+                  </Box>
+                  <Slider value={peakUploadLimit} onChange={(_, v) => setPeakUploadLimit(v as number)}
+                    min={1} max={50} step={1} valueLabelDisplay="auto" valueLabelFormat={(v) => `${v} Mbps`} />
+                </Box>
+
+                <Box>
+                  <Box className="flex items-center justify-between mb-1">
+                    <Typography variant="caption" className="font-medium">高峰下载限速</Typography>
+                    <Typography variant="caption" color="error" sx={{ fontWeight: 700 }}>{peakDownloadLimit} Mbps</Typography>
+                  </Box>
+                  <Slider value={peakDownloadLimit} onChange={(_, v) => setPeakDownloadLimit(v as number)}
+                    min={1} max={100} step={1} valueLabelDisplay="auto" valueLabelFormat={(v) => `${v} Mbps`} />
+                </Box>
+              </>
+            )}
+          </Paper>
+        </>
+      )}
+    </Box>
+  );
+}
+
 export default function SecurityPolicy() {
   const [tab, setTab] = useState(0);
 
@@ -702,17 +1047,23 @@ export default function SecurityPolicy() {
           </Typography>
         </Box>
 
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }} variant="scrollable" scrollButtons="auto">
           <Tab label="🧹 磁盘清理" />
           <Tab label="📂 文件迁移" />
           <Tab label="⚠️ 磁盘格式化" />
           <Tab label="🎙️ 音频转文字" />
+          <Tab label="🚫 弹窗拦截" />
+          <Tab label="🌐 网址过滤" />
+          <Tab label="⚡ 流量管控" />
         </Tabs>
 
         {tab === 0 && <DiskCleanupPanel />}
         {tab === 1 && <FileMigrationPanel />}
         {tab === 2 && <DiskFormatPanel />}
         {tab === 3 && <AudioTranscribePanel />}
+        {tab === 4 && <PopupBlockPanel />}
+        {tab === 5 && <UrlFilterPanel />}
+        {tab === 6 && <TrafficControlPanel />}
       </Box>
     </Box>
   );
