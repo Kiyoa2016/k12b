@@ -14,7 +14,7 @@ import {
   Computer, CheckCircle, Close,
   VideoFile, Image, MusicNote, Description,
   Download, Upload, Preview,
-  Public, Speed, Add, Delete, Group,
+  Block, Public, Speed, Add, Delete, Group,
   CloudOff, Storage, Schedule,
 } from '@mui/icons-material';
 
@@ -1054,7 +1054,7 @@ export default function SecurityPolicy() {
           <Tab label="弹窗拦截" />
           <Tab label="网址过滤" />
           <Tab label="流量管控" />
-          <Tab label="音频转文字" disabled />
+          <Tab label="音频转文字" disabled icon={<Block sx={{ fontSize: 14, opacity: 0.5 }} />} iconPosition="end" sx={{ '&.Mui-disabled': { cursor: 'not-allowed', pointerEvents: 'auto' } }} />
         </Tabs>
 
         {tab === 0 && <DiskCleanupPanel />}
