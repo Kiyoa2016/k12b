@@ -8,6 +8,7 @@ import {
   Dialog, DialogTitle, DialogContent,
   Snackbar, Alert, Divider,
 } from '@mui/material';
+import SendMessageDialog, { type SendMessagePayload } from './SendMessageDialog';
 import {
   ChevronRight, ExpandMore, Search, ViewList, ViewModule,
   Business, LocationOn, Visibility, Close, Videocam, Monitor,
@@ -364,11 +365,21 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
   }, [channels.length]);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+  const [sendMessageOpen, setSendMessageOpen] = useState(false);
 
   const handleRemoteCommand = (cmd: typeof remoteCommands[0]) => {
     if (!classroom) return;
+    if (cmd.label === '发送信息') {
+      setSendMessageOpen(true);
+      return;
+    }
     setSnackbar({ open: true, message: cmd.message(classroom.name) });
     // TODO: 调用实际 API
+  };
+
+  const handleSendMessage = (payload: SendMessagePayload) => {
+    setSnackbar({ open: true, message: `已发送信息至 ${classroom!.name}` });
+    // TODO: 调用实际 API — payload 包含完整消息配置
   };
 
   if (!classroom) return null;
@@ -559,6 +570,14 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
             {snackbar.message}
           </Alert>
         </Snackbar>
+
+        {/* 发送信息弹窗 */}
+        <SendMessageDialog
+          classroom={classroom}
+          open={sendMessageOpen}
+          onClose={() => setSendMessageOpen(false)}
+          onSend={handleSendMessage}
+        />
       </DialogContent>
     </Dialog>
   );
