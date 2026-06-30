@@ -478,9 +478,39 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
             </Box>
           </Box>
 
-          {/* 右：视频流切换列表 */}
-          <Box className="w-56 flex-shrink-0 flex flex-col gap-1.5">
-            <Typography variant="subtitle2" className="font-bold text-gray-700 mb-1">视频源列表</Typography>
+          {/* 右：设备信息 + 视频流切换列表 */}
+          <Box className="w-56 flex-shrink-0 flex flex-col gap-2">
+            {/* 设备信息 */}
+            <Box sx={{ p: 1.5, borderRadius: 2, border: '1px solid #e5e7eb', backgroundColor: '#fafafa' }}>
+              <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', fontSize: 11, mb: 1, display: 'block' }}>
+                设备信息
+              </Typography>
+              <Box className="flex flex-col gap-1">
+                <Box className="flex justify-between">
+                  <Typography variant="caption" sx={{ fontSize: 10, color: '#9ca3af' }}>设备编号</Typography>
+                  <Typography variant="caption" sx={{ fontSize: 10, color: '#374151', fontWeight: 600 }}>{classroom.deviceCode}</Typography>
+                </Box>
+                <Box className="flex justify-between">
+                  <Typography variant="caption" sx={{ fontSize: 10, color: '#9ca3af' }}>所在位置</Typography>
+                  <Typography variant="caption" sx={{ fontSize: 10, color: '#374151', fontWeight: 600 }}>{classroom.building} {classroom.room}</Typography>
+                </Box>
+                <Box className="flex justify-between">
+                  <Typography variant="caption" sx={{ fontSize: 10, color: '#9ca3af' }}>年级班级</Typography>
+                  <Typography variant="caption" sx={{ fontSize: 10, color: '#374151', fontWeight: 600 }}>{classroom.grade}{classroom.classLabel}</Typography>
+                </Box>
+                <Box className="flex justify-between items-center">
+                  <Typography variant="caption" sx={{ fontSize: 10, color: '#9ca3af' }}>设备状态</Typography>
+                  <Chip
+                    label={classroom.status === 'online' ? '在线' : '离线'}
+                    size="small"
+                    sx={{ height: 16, fontSize: 9, fontWeight: 600, backgroundColor: classroom.status === 'online' ? '#dcfce7' : '#f3f4f6', color: classroom.status === 'online' ? '#16a34a' : '#6b7280', '& .MuiChip-label': { px: 0.5 } }}
+                  />
+                </Box>
+              </Box>
+            </Box>
+
+            {/* 视频源列表 */}
+            <Typography variant="subtitle2" className="font-bold text-gray-700">视频源列表</Typography>
             {channels.map((ch, i) => {
               const isActive = i === activeChannel;
               return (
