@@ -367,20 +367,23 @@ function generateChannels(room: string) {
   return channels;
 }
 
+// ─── 远程命令常量 ───
+
+const remoteCommands = [
+  { label: '开机', icon: <PowerSettingsNew sx={{ fontSize: 16 }} />, color: '#16a34a', message: (name: string) => `已发送开机指令至 ${name}` },
+  { label: '关机', icon: <PowerOff sx={{ fontSize: 16 }} />, color: '#ef4444', message: (name: string) => `已发送关机指令至 ${name}` },
+  { label: '远程喊话', icon: <Campaign sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已向 ${name} 发起远程喊话` },
+  { label: '发送信息', icon: <Send sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已发送信息至 ${name}` },
+];
+
 function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | null; open: boolean; onClose: () => void }) {
   const [channels] = useState(() => (classroom ? generateChannels(classroom.room) : []));
   const [activeChannel, setActiveChannel] = useState(0);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
-  const remoteCommands = [
-    { label: '开机', icon: <PowerSettingsNew sx={{ fontSize: 16 }} />, color: '#16a34a', message: (name: string) => `已发送开机指令至 ${name}` },
-    { label: '关机', icon: <PowerOff sx={{ fontSize: 16 }} />, color: '#ef4444', message: (name: string) => `已发送关机指令至 ${name}` },
-    { label: '远程喊话', icon: <Campaign sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已向 ${name} 发起远程喊话` },
-    { label: '发送信息', icon: <Send sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已发送信息至 ${name}` },
-  ];
-
   const handleRemoteCommand = (cmd: typeof remoteCommands[0]) => {
+    if (!classroom) return;
     setSnackbar({ open: true, message: cmd.message(classroom.name) });
     // TODO: 调用实际 API
   };
