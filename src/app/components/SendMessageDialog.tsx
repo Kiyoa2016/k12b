@@ -99,7 +99,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
   if (!classroom) return null;
 
   const fontPx = FONT_SIZE_OPTIONS.find(o => o.value === fontSize)?.px ?? 24;
-  const previewWidth = 340;
+  const previewWidth = 480;
   const previewHeight = Math.round(previewWidth * 10 / 16);
 
   return (
@@ -178,26 +178,79 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
 
           {/* 右栏：配置 */}
           <Box className="w-72 flex-shrink-0 flex flex-col gap-3 overflow-auto">
-            {/* 消息内容 */}
-            <Box>
-              <Box className="flex items-center justify-between mb-1">
-                <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', fontSize: 11 }}>消息内容</Typography>
-                <Typography variant="caption" sx={{ fontSize: 10, color: content.length > 150 ? '#ef4444' : '#9ca3af' }}>
-                  {content.length}/150
-                </Typography>
-              </Box>
+            {/* 消息内容（含快捷模板与字数统计叠加） */}
+            <Box sx={{ position: 'relative' }}>
               <TextField
                 fullWidth
                 multiline
-                minRows={3}
-                maxRows={6}
+                minRows={4}
+                maxRows={7}
                 placeholder="请输入消息内容..."
                 value={content}
                 onChange={(e) => setContent(e.target.value.slice(0, 150))}
                 error={touched && (content.trim().length === 0 || content.length > 150)}
                 helperText={touched && content.trim().length === 0 ? '消息内容不能为空' : ''}
                 size="small"
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    pt: '36px',      // 给右上角模板选择留空间
+                    pb: '28px',      // 给右下角字数统计留空间
+                  },
+                }}
               />
+
+              {/* 快捷模板 — 右上角浮在输入框上 */}
+              <FormControl size="small" sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, minWidth: 120, maxWidth: 200 }}>
+                <Select
+                  value=""
+                  displayEmpty
+                  onChange={(e) => handleTemplateSelect(e.target.value)}
+                  renderValue={() => <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: 11, fontWeight: 600 }}>📋 选择模板</Typography>}
+                  sx={{
+                    backgroundColor: 'rgba(255,255,255,0.92)',
+                    backdropFilter: 'blur(4px)',
+                    fontSize: 12,
+                    height: 28,
+                    '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#d1d5db' },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#3b82f6', borderWidth: 1 },
+                    '& .MuiSelect-select': { py: 0.25, px: 1 },
+                  }}
+                >
+                  {TEMPLATE_CATEGORIES.map((cat) => [
+                    <MenuItem key={cat} disabled sx={{ opacity: 0.6, fontSize: 11, fontWeight: 700, minHeight: 28 }}>
+                      {cat}
+                    </MenuItem>,
+                    ...MESSAGE_TEMPLATES
+                      .filter(t => t.category === cat)
+                      .map(t => (
+                        <MenuItem key={t.id} value={t.id} sx={{ pl: 3, fontSize: 13, minHeight: 32 }}>
+                          {t.text}
+                        </MenuItem>
+                      )),
+                  ])}
+                </Select>
+              </FormControl>
+
+              {/* 字数统计 — 右下角浮在输入框上 */}
+              <Typography
+                variant="caption"
+                sx={{
+                  position: 'absolute',
+                  bottom: 8,
+                  right: 10,
+                  zIndex: 1,
+                  fontSize: 10,
+                  color: content.length > 150 ? '#ef4444' : '#9ca3af',
+                  fontWeight: 600,
+                  backgroundColor: 'rgba(255,255,255,0.85)',
+                  backdropFilter: 'blur(4px)',
+                  px: 0.5,
+                  borderRadius: 0.5,
+                }}
+              >
+                {content.length}/150
+              </Typography>
             </Box>
 
             {/* 字体大小 */}
@@ -242,32 +295,6 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                   </Box>
                 ))}
               </Box>
-            </Box>
-
-            {/* 快捷模板 */}
-            <Box>
-              <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', fontSize: 11, mb: 0.5, display: 'block' }}>快捷模板</Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  value=""
-                  displayEmpty
-                  onChange={(e) => handleTemplateSelect(e.target.value)}
-                  renderValue={() => <Typography variant="body2" sx={{ color: '#9ca3af' }}>选择模板...</Typography>}
-                >
-                  {TEMPLATE_CATEGORIES.map((cat) => [
-                    <MenuItem key={cat} disabled sx={{ opacity: 0.6, fontSize: 11, fontWeight: 700 }}>
-                      {cat}
-                    </MenuItem>,
-                    ...MESSAGE_TEMPLATES
-                      .filter(t => t.category === cat)
-                      .map(t => (
-                        <MenuItem key={t.id} value={t.id} sx={{ pl: 3, fontSize: 13 }}>
-                          {t.text}
-                        </MenuItem>
-                      )),
-                  ])}
-                </Select>
-              </FormControl>
             </Box>
 
             {/* 播放方式 */}
