@@ -6,10 +6,12 @@ import {
   TableHead, TableRow, Paper,
   MenuItem, FormControl, Select,
   Dialog, DialogTitle, DialogContent,
+  Snackbar, Alert, Divider,
 } from '@mui/material';
 import {
   ChevronRight, ExpandMore, Search, ViewList, ViewModule,
   Business, LocationOn, Visibility, Close, Videocam, Monitor,
+  PowerSettingsNew, PowerOff, Campaign, Send,
 } from '@mui/icons-material';
 
 // ─── 类型定义 ───
@@ -369,6 +371,20 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
   const [channels] = useState(() => (classroom ? generateChannels(classroom.room) : []));
   const [activeChannel, setActiveChannel] = useState(0);
 
+  const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
+
+  const remoteCommands = [
+    { label: '开机', icon: <PowerSettingsNew sx={{ fontSize: 16 }} />, color: '#16a34a', message: (name: string) => `已发送开机指令至 ${name}` },
+    { label: '关机', icon: <PowerOff sx={{ fontSize: 16 }} />, color: '#ef4444', message: (name: string) => `已发送关机指令至 ${name}` },
+    { label: '远程喊话', icon: <Campaign sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已向 ${name} 发起远程喊话` },
+    { label: '发送信息', icon: <Send sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已发送信息至 ${name}` },
+  ];
+
+  const handleRemoteCommand = (cmd: typeof remoteCommands[0]) => {
+    setSnackbar({ open: true, message: cmd.message(classroom.name) });
+    // TODO: 调用实际 API
+  };
+
   if (!classroom) return null;
   const current = channels[activeChannel];
   const channelType = CHANNEL_TYPES.find((c) => c.type === current?.type);
@@ -385,9 +401,10 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
         </Box>
       </DialogTitle>
       <DialogContent sx={{ p: 2 }}>
-        <Box className="flex gap-3" sx={{ height: 480 }}>
-          {/* 左：视频流 */}
-          <Box className="flex-1 rounded-lg overflow-hidden relative" sx={{ backgroundColor: '#0f172a' }}>
+        <Box className="flex gap-3" sx={{ height: 528 }}>
+          {/* 左：视频流 + 控制按钮 */}
+          <Box className="flex-1 flex flex-col gap-0">
+            <Box className="flex-1 rounded-lg overflow-hidden relative" sx={{ backgroundColor: '#0f172a' }}>
             {current ? (
               <>
                 {/* 模拟视频画面 */}
@@ -448,6 +465,38 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
             )}
           </Box>
 
+            {/* 远程控制按钮栏 */}
+            <Box className="flex items-center gap-3 px-3" sx={{ height: 48, borderTop: '1px solid #e5e7eb', backgroundColor: '#fafafa', borderRadius: '0 0 8px 8px' }}>
+              <Typography variant="caption" sx={{ fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap', fontSize: 12 }}>
+                远程控制：
+              </Typography>
+              {remoteCommands.map((cmd) => (
+                <Tooltip key={cmd.label} title={!current ? '当前无视频连接' : ''}>
+                  <span>
+                    <Button
+                      size="small"
+                      variant="text"
+                      disabled={!current}
+                      startIcon={cmd.icon}
+                      onClick={() => handleRemoteCommand(cmd)}
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: cmd.color,
+                        minWidth: 'auto',
+                        px: 1,
+                        '&:hover': { backgroundColor: `${cmd.color}10` },
+                        '&.Mui-disabled': { opacity: 0.4 },
+                      }}
+                    >
+                      {cmd.label}
+                    </Button>
+                  </span>
+                </Tooltip>
+              ))}
+            </Box>
+          </Box>
+
           {/* 右：视频流切换列表 */}
           <Box className="w-56 flex-shrink-0 flex flex-col gap-1.5">
             <Typography variant="subtitle2" className="font-bold text-gray-700 mb-1">视频源列表</Typography>
@@ -477,6 +526,18 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
             })}
           </Box>
         </Box>
+
+        {/* Snackbar 提示 */}
+        <Snackbar
+          open={snackbar.open}
+          autoHideDuration={3000}
+          onClose={() => setSnackbar({ open: false, message: '' })}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="success" variant="filled" sx={{ width: '100%' }}>
+            {snackbar.message}
+          </Alert>
+        </Snackbar>
       </DialogContent>
     </Dialog>
   );
