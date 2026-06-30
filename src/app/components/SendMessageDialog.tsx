@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Box, Typography, Dialog, DialogTitle, DialogContent,
   DialogActions, Button, IconButton, TextField, Radio,
-  RadioGroup, FormControlLabel, FormControl, FormLabel,
+  RadioGroup, FormControlLabel, FormControl,
   Select, MenuItem, Chip,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
@@ -52,6 +52,12 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
   const [playMode, setPlayMode] = useState<'marquee' | 'popup'>('marquee');
   const [playCount, setPlayCount] = useState(3);
   const [touched, setTouched] = useState(false);
+  const previewTimeRef = useRef(new Date());
+
+  // 弹窗打开时刷新预览时间
+  useEffect(() => {
+    if (open) previewTimeRef.current = new Date();
+  }, [open]);
 
   // 关闭时重置状态
   const handleClose = () => {
@@ -77,6 +83,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
   const handleSend = () => {
     setTouched(true);
     if (!isValid || !classroom) return;
+    const matchedTemplate = MESSAGE_TEMPLATES.find(t => t.text === content.trim());
     onSend({
       classroomId: classroom.id,
       content: content.trim(),
@@ -84,6 +91,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
       fontColor,
       playMode,
       playCount: playMode === 'marquee' ? playCount : 1,
+      templateId: matchedTemplate?.id,
     });
     handleClose();
   };
@@ -159,7 +167,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                     {classroom.deviceCode}
                   </Typography>
                   <Typography variant="caption" sx={{ fontSize: 8, color: 'rgba(255,255,255,0.5)', ml: 'auto' }}>
-                    {new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
+                    {previewTimeRef.current.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                   </Typography>
                 </Box>
               </Box>
@@ -182,7 +190,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                 fullWidth
                 multiline
                 minRows={3}
-                maxRows={5}
+                maxRows={6}
                 placeholder="请输入消息内容..."
                 value={content}
                 onChange={(e) => setContent(e.target.value.slice(0, 150))}
