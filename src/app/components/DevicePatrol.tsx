@@ -23,7 +23,7 @@ interface DesktopIcon {
   label: string;
 }
 
-interface Classroom {
+export interface Classroom {
   id: string;
   name: string;
   building: string;
