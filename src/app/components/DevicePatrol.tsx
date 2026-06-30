@@ -12,7 +12,7 @@ import SendMessageDialog, { type SendMessagePayload } from './SendMessageDialog'
 import {
   ChevronRight, ExpandMore, Search, ViewList, ViewModule,
   Business, LocationOn, Visibility, Close, Videocam, Monitor,
-  PowerSettingsNew, PowerOff, Campaign, Send,
+  PowerSettingsNew, PowerOff, Campaign, Send, StopCircle,
 } from '@mui/icons-material';
 
 // ─── 类型定义 ───
@@ -352,7 +352,6 @@ function generateChannels(room: string) {
 const remoteCommands = [
   { label: '开机', icon: <PowerSettingsNew sx={{ fontSize: 16 }} />, color: '#16a34a', message: (name: string) => `已发送开机指令至 ${name}` },
   { label: '关机', icon: <PowerOff sx={{ fontSize: 16 }} />, color: '#ef4444', message: (name: string) => `已发送关机指令至 ${name}` },
-  { label: '远程喊话', icon: <Campaign sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已向 ${name} 发起远程喊话` },
   { label: '发送信息', icon: <Send sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已发送信息至 ${name}` },
 ];
 
@@ -366,6 +365,7 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
+  const [broadcasting, setBroadcasting] = useState(false);
 
   const handleRemoteCommand = (cmd: typeof remoteCommands[0]) => {
     if (!classroom) return;
@@ -375,6 +375,19 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
     }
     setSnackbar({ open: true, message: cmd.message(classroom.name) });
     // TODO: 调用实际 API
+  };
+
+  const handleBroadcastToggle = () => {
+    if (!classroom) return;
+    if (broadcasting) {
+      setBroadcasting(false);
+      setSnackbar({ open: true, message: `已停止对 ${classroom.name} 的远程喊话` });
+      // TODO: 调用停止喊话 API
+    } else {
+      setBroadcasting(true);
+      setSnackbar({ open: true, message: `已向 ${classroom.name} 发起远程喊话，请对着麦克风说话` });
+      // TODO: 调用开始喊话 API
+    }
   };
 
   const handleSendMessage = (payload: SendMessagePayload) => {
@@ -401,6 +414,14 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
           {/* 左：视频流 + 控制按钮 */}
           <Box className="flex-1 flex flex-col gap-0">
             <Box className="flex-1 rounded-lg overflow-hidden relative" sx={{ backgroundColor: '#0f172a' }}>
+            {broadcasting && (
+              <Box className="absolute top-0 left-0 right-0 z-20 flex items-center justify-center gap-2" sx={{ height: 32, backgroundColor: 'rgba(239,68,68,0.9)' }}>
+                <Campaign sx={{ fontSize: 14, color: '#fff' }} />
+                <Typography variant="caption" sx={{ color: '#fff', fontWeight: 700, fontSize: 11 }}>
+                  远程喊话中 — 正在对 {classroom.name} 进行喊话
+                </Typography>
+              </Box>
+            )}
             {current ? (
               <>
                 {/* 模拟视频画面 */}
@@ -466,6 +487,31 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap', fontSize: 12 }}>
                 远程控制：
               </Typography>
+              {/* 远程喊话（开关按钮，单独渲染） */}
+              <Tooltip title={classroom.status === 'offline' ? '设备已离线，无法执行此操作' : (broadcasting ? '点击停止喊话' : '点击开始远程喊话')}>
+                <span>
+                  <Button
+                    size="small"
+                    variant={broadcasting ? 'contained' : 'text'}
+                    disabled={classroom.status === 'offline'}
+                    startIcon={broadcasting ? <StopCircle sx={{ fontSize: 16 }} /> : <Campaign sx={{ fontSize: 16 }} />}
+                    onClick={handleBroadcastToggle}
+                    sx={{
+                      fontSize: 12,
+                      fontWeight: 700,
+                      minWidth: 'auto',
+                      px: 1,
+                      ...(broadcasting
+                        ? { backgroundColor: '#ef4444', color: '#fff', '&:hover': { backgroundColor: '#dc2626' } }
+                        : { color: '#3b82f6', '&:hover': { backgroundColor: '#3b82f610' } }
+                      ),
+                      '&.Mui-disabled': { opacity: 0.4 },
+                    }}
+                  >
+                    {broadcasting ? '停止喊话' : '远程喊话'}
+                  </Button>
+                </span>
+              </Tooltip>
               {remoteCommands.map((cmd) => (
                 <Tooltip key={cmd.label} title={classroom.status === 'offline' ? '设备已离线，无法执行此操作' : ''}>
                   <span>
