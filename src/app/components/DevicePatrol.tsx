@@ -347,14 +347,6 @@ function generateChannels(room: string) {
   }));
 }
 
-// ─── 远程命令常量 ───
-
-const remoteCommands = [
-  { label: '开机', icon: <PowerSettingsNew sx={{ fontSize: 16 }} />, color: '#16a34a', message: (name: string) => `已发送开机指令至 ${name}` },
-  { label: '关机', icon: <PowerOff sx={{ fontSize: 16 }} />, color: '#ef4444', message: (name: string) => `已发送关机指令至 ${name}` },
-  { label: '发送信息', icon: <Send sx={{ fontSize: 16 }} />, color: '#3b82f6', message: (name: string) => `已发送信息至 ${name}` },
-];
-
 function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | null; open: boolean; onClose: () => void }) {
   const channels = useMemo(() => (classroom ? generateChannels(classroom.room) : []), [classroom]);
   const [activeChannel, setActiveChannel] = useState(2); // 默认选中板书
@@ -366,16 +358,6 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
   const [sendMessageOpen, setSendMessageOpen] = useState(false);
   const [broadcasting, setBroadcasting] = useState(false);
-
-  const handleRemoteCommand = (cmd: typeof remoteCommands[0]) => {
-    if (!classroom) return;
-    if (cmd.label === '发送信息') {
-      setSendMessageOpen(true);
-      return;
-    }
-    setSnackbar({ open: true, message: cmd.message(classroom.name) });
-    // TODO: 调用实际 API
-  };
 
   const handleBroadcastToggle = () => {
     if (!classroom) return;
@@ -487,7 +469,46 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
               <Typography variant="caption" sx={{ fontWeight: 600, color: '#6b7280', whiteSpace: 'nowrap', fontSize: 12 }}>
                 远程控制：
               </Typography>
-              {/* 远程喊话（开关按钮，单独渲染） */}
+
+              {/* 开机 — 离线时可用，在线时禁用 */}
+              <Tooltip title={classroom.status === 'online' ? '设备已处于开机状态' : ''}>
+                <span>
+                  <Button
+                    size="small"
+                    variant="text"
+                    disabled={classroom.status === 'online'}
+                    startIcon={<PowerSettingsNew sx={{ fontSize: 16 }} />}
+                    onClick={() => {
+                      setSnackbar({ open: true, message: `已发送开机指令至 ${classroom.name}` });
+                      // TODO: 调用开机 API
+                    }}
+                    sx={{ fontSize: 12, fontWeight: 600, color: '#16a34a', minWidth: 'auto', px: 1, '&:hover': { backgroundColor: '#16a34a10' }, '&.Mui-disabled': { opacity: 0.4 } }}
+                  >
+                    开机
+                  </Button>
+                </span>
+              </Tooltip>
+
+              {/* 关机 — 在线时可用 */}
+              <Tooltip title={classroom.status === 'offline' ? '设备已离线，无法执行此操作' : ''}>
+                <span>
+                  <Button
+                    size="small"
+                    variant="text"
+                    disabled={classroom.status === 'offline'}
+                    startIcon={<PowerOff sx={{ fontSize: 16 }} />}
+                    onClick={() => {
+                      setSnackbar({ open: true, message: `已发送关机指令至 ${classroom.name}` });
+                      // TODO: 调用关机 API
+                    }}
+                    sx={{ fontSize: 12, fontWeight: 600, color: '#ef4444', minWidth: 'auto', px: 1, '&:hover': { backgroundColor: '#ef444410' }, '&.Mui-disabled': { opacity: 0.4 } }}
+                  >
+                    关机
+                  </Button>
+                </span>
+              </Tooltip>
+
+              {/* 远程喊话 — 在线时可用，点击后切换为停止喊话 */}
               <Tooltip title={classroom.status === 'offline' ? '设备已离线，无法执行此操作' : (broadcasting ? '点击停止喊话' : '点击开始远程喊话')}>
                 <span>
                   <Button
@@ -497,10 +518,7 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
                     startIcon={broadcasting ? <StopCircle sx={{ fontSize: 16 }} /> : <Campaign sx={{ fontSize: 16 }} />}
                     onClick={handleBroadcastToggle}
                     sx={{
-                      fontSize: 12,
-                      fontWeight: 700,
-                      minWidth: 'auto',
-                      px: 1,
+                      fontSize: 12, fontWeight: 700, minWidth: 'auto', px: 1,
                       ...(broadcasting
                         ? { backgroundColor: '#ef4444', color: '#fff', '&:hover': { backgroundColor: '#dc2626' } }
                         : { color: '#3b82f6', '&:hover': { backgroundColor: '#3b82f610' } }
@@ -512,30 +530,22 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
                   </Button>
                 </span>
               </Tooltip>
-              {remoteCommands.map((cmd) => (
-                <Tooltip key={cmd.label} title={classroom.status === 'offline' ? '设备已离线，无法执行此操作' : ''}>
-                  <span>
-                    <Button
-                      size="small"
-                      variant="text"
-                      disabled={classroom.status === 'offline'}
-                      startIcon={cmd.icon}
-                      onClick={() => handleRemoteCommand(cmd)}
-                      sx={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: cmd.color,
-                        minWidth: 'auto',
-                        px: 1,
-                        '&:hover': { backgroundColor: `${cmd.color}10` },
-                        '&.Mui-disabled': { opacity: 0.4 },
-                      }}
-                    >
-                      {cmd.label}
-                    </Button>
-                  </span>
-                </Tooltip>
-              ))}
+
+              {/* 发送信息 — 在线时可用 */}
+              <Tooltip title={classroom.status === 'offline' ? '设备已离线，无法执行此操作' : ''}>
+                <span>
+                  <Button
+                    size="small"
+                    variant="text"
+                    disabled={classroom.status === 'offline'}
+                    startIcon={<Send sx={{ fontSize: 16 }} />}
+                    onClick={() => setSendMessageOpen(true)}
+                    sx={{ fontSize: 12, fontWeight: 600, color: '#3b82f6', minWidth: 'auto', px: 1, '&:hover': { backgroundColor: '#3b82f610' }, '&.Mui-disabled': { opacity: 0.4 } }}
+                  >
+                    发送信息
+                  </Button>
+                </span>
+              </Tooltip>
             </Box>
           </Box>
 
