@@ -1048,13 +1048,13 @@ export default function SecurityPolicy() {
         </Box>
 
         <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 3 }} variant="scrollable" scrollButtons="auto">
-          <Tab label="🧹 磁盘清理" />
-          <Tab label="📂 文件迁移" />
-          <Tab label="⚠️ 磁盘格式化" />
-          <Tab label="🎙️ 音频转文字" />
-          <Tab label="🚫 弹窗拦截" />
-          <Tab label="🌐 网址过滤" />
-          <Tab label="⚡ 流量管控" />
+          <Tab label="磁盘清理" />
+          <Tab label="文件迁移" />
+          <Tab label="磁盘格式化" />
+          <Tab label="音频转文字" />
+          <Tab label="弹窗拦截" />
+          <Tab label="网址过滤" />
+          <Tab label="流量管控" />
         </Tabs>
 
         {tab === 0 && <DiskCleanupPanel />}
