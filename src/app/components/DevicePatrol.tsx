@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Card, CardContent, Button, IconButton,
   TextField, InputAdornment, Chip, Tooltip,
@@ -356,8 +356,12 @@ const remoteCommands = [
 ];
 
 function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | null; open: boolean; onClose: () => void }) {
-  const [channels] = useState(() => (classroom ? generateChannels(classroom.room) : []));
+  const channels = useMemo(() => (classroom ? generateChannels(classroom.room) : []), [classroom]);
   const [activeChannel, setActiveChannel] = useState(2); // 默认选中板书
+  // 教室切换时重置到板书（板书索引为2，若通道数不足则取最后一个）
+  useEffect(() => {
+    setActiveChannel(Math.min(2, channels.length - 1));
+  }, [channels.length]);
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
