@@ -1,9 +1,54 @@
-import { useState } from 'react';
+# 发送信息弹窗（SendMessageDialog）实现计划
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** 在设备巡视弹窗中点击"发送信息"按钮时，打开一个独立的左右分栏的消息发送弹窗
+
+**Architecture:** 创建独立组件 `SendMessageDialog.tsx`，在 `PatrolDialog` 中通过状态控制显隐。"发送信息"按钮从原来的 snackbar 提示改为打开新弹窗，发送完成后回调显示 snackbar
+
+**Tech Stack:** React + TypeScript + MUI v7 + Tailwind CSS
+
+## 全局约束
+
+- 消息内容 ≤ 150 字
+- 字体大小三档：小=16px，中=24px，大=36px
+- 预设六色：`#ffffff` `#ff4444` `#ffbb00` `#44ff44` `#44bbff` `#ff88ff`
+- 播放次数仅跑马灯模式显示，范围 1~99，默认 3
+- 使用 MUI 组件（Dialog, TextField, Select, Radio, Chip 等）
+- 遵循现有 `DevicePatrol.tsx` 的代码风格（MUI sx + Tailwind class 混用）
+
+---
+
+### Task 1: 创建 SendMessageDialog 组件 — 状态与结构
+
+**Files:**
+- Create: `src/app/components/SendMessageDialog.tsx`
+- Modify: (无)
+
+**Interfaces:**
+- Consumes: `Classroom` 类型（来自 DevicePatrol.tsx）
+- Produces: `SendMessageDialog` 组件 props: `{ classroom: Classroom | null; open: boolean; onClose: () => void; onSend: (payload: SendMessagePayload) => void }`
+
+- [ ] **Step 1: 在 DevicePatrol.tsx 顶部导出 Classroom 类型**
+
+当前 `Classroom` 接口定义在 `DevicePatrol.tsx` 第 26-39 行。添加 `export` 关键字使其可被其他文件导入：
+
+```typescript
+// DevicePatrol.tsx 第 26 行
+export interface Classroom {
+```
+
+- [ ] **Step 2: 创建 SendMessageDialog.tsx 骨架**
+
+创建文件 `src/app/components/SendMessageDialog.tsx`，写入 imports、类型定义和组件骨架：
+
+```typescript
+import { useState, useMemo } from 'react';
 import {
   Box, Typography, Dialog, DialogTitle, DialogContent,
   DialogActions, Button, IconButton, TextField, Radio,
   RadioGroup, FormControlLabel, FormControl, FormLabel,
-  Select, MenuItem, Chip,
+  Select, MenuItem, Chip, InputAdornment,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
 import type { Classroom } from './DevicePatrol';
@@ -311,3 +356,95 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
     </Dialog>
   );
 }
+```
+
+- [ ] **Step 3: Verify the file compiles**
+
+Run: `npx tsc --noEmit src/app/components/SendMessageDialog.tsx --jsx react-jsx --esModuleInterop --moduleResolution bundler`
+Expected: No type errors
+
+---
+
+### Task 2: 集成 SendMessageDialog 到 PatrolDialog
+
+**Files:**
+- Modify: `src/app/components/DevicePatrol.tsx`
+
+**Interfaces:**
+- Consumes: `SendMessageDialog` 组件和 `SendMessagePayload` 类型
+- Produces: 点击"发送信息"时打开 SendMessageDialog，发送后显示 Snackbar
+
+- [ ] **Step 1: 添加导入**
+
+在 `DevicePatrol.tsx` 头部 imports 区域添加：
+
+```typescript
+import SendMessageDialog, { type SendMessagePayload } from './SendMessageDialog';
+```
+
+- [ ] **Step 2: 在 PatrolDialog 中添加 sendMessageOpen 状态**
+
+在 `PatrolDialog` 函数内，`snackbar` 状态后面添加：
+
+```typescript
+const [sendMessageOpen, setSendMessageOpen] = useState(false);
+```
+
+- [ ] **Step 3: 修改 handleRemoteCommand 分离"发送信息"逻辑**
+
+将原来的 `handleRemoteCommand` 函数改为：如果命令是"发送信息"则打开弹窗，否则保持原有 snackbar 行为：
+
+```typescript
+const handleRemoteCommand = (cmd: typeof remoteCommands[0]) => {
+  if (!classroom) return;
+  if (cmd.label === '发送信息') {
+    setSendMessageOpen(true);
+    return;
+  }
+  setSnackbar({ open: true, message: cmd.message(classroom.name) });
+  // TODO: 调用实际 API
+};
+```
+
+- [ ] **Step 4: 添加 handleSendMessage 回调**
+
+在 `handleRemoteCommand` 后面添加：
+
+```typescript
+const handleSendMessage = (payload: SendMessagePayload) => {
+  setSnackbar({ open: true, message: `已发送信息至 ${classroom.name}` });
+  // TODO: 调用实际 API — payload 包含完整消息配置
+};
+```
+
+- [ ] **Step 5: 在 PatrolDialog 的 DialogContent 底部（Snackbar 之后）添加 SendMessageDialog**
+
+在 `</DialogContent>` 之前，`<Snackbar>` 组件之后添加：
+
+```typescript
+{/* 发送信息弹窗 */}
+<SendMessageDialog
+  classroom={classroom}
+  open={sendMessageOpen}
+  onClose={() => setSendMessageOpen(false)}
+  onSend={handleSendMessage}
+/>
+```
+
+- [ ] **Step 6: 验证集成**
+
+Run: `npx tsc --noEmit`
+Expected: No type errors
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/app/components/SendMessageDialog.tsx src/app/components/DevicePatrol.tsx
+git commit -m "feat(device-patrol): 添加发送信息弹窗SendMessageDialog
+
+- 支持消息内容编辑，150字限制，字体大小/颜色设置
+- 支持快捷消息模板选择（三类六条）
+- 支持跑马灯/全局弹窗两种播放方式
+- 跑马灯模式下支持播放次数设置
+- 左栏实时预览消息在设备屏幕上的效果"
+```

@@ -53,7 +53,12 @@
       "Bash(curl -s http://localhost:5173)",
       "Bash(curl -s http://localhost:5174/src/app/components/DeviceManagement.tsx)",
       "Bash(curl -s -o /dev/null http://localhost:5174/)",
-      "Bash(curl -s http://localhost:5174/@vite/client)"
+      "Bash(curl -s http://localhost:5174/@vite/client)",
+      "Bash(jobs -l)",
+      "Bash(kill %1)",
+      "Bash(wait %1)",
+      "Bash(pnpm run *)",
+      "Bash(pnpm ls *)"
     ]
   }
 }
