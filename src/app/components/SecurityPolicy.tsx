@@ -1051,19 +1051,19 @@ export default function SecurityPolicy() {
           <Tab label="磁盘清理" />
           <Tab label="文件迁移" />
           <Tab label="磁盘格式化" />
-          <Tab label="音频转文字" />
           <Tab label="弹窗拦截" />
           <Tab label="网址过滤" />
           <Tab label="流量管控" />
+          <Tab label="音频转文字" disabled />
         </Tabs>
 
         {tab === 0 && <DiskCleanupPanel />}
         {tab === 1 && <FileMigrationPanel />}
         {tab === 2 && <DiskFormatPanel />}
-        {tab === 3 && <AudioTranscribePanel />}
-        {tab === 4 && <PopupBlockPanel />}
-        {tab === 5 && <UrlFilterPanel />}
-        {tab === 6 && <TrafficControlPanel />}
+        {tab === 3 && <PopupBlockPanel />}
+        {tab === 4 && <UrlFilterPanel />}
+        {tab === 5 && <TrafficControlPanel />}
+        {tab === 6 && <AudioTranscribePanel />}
       </Box>
     </Box>
   );
