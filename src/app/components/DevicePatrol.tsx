@@ -333,37 +333,17 @@ function DesktopPreview({ classroom }: { classroom: Classroom }) {
 
 // ─── 视频巡视弹窗 ───
 
-const CHANNEL_TYPES = [
-  { type: 'camera', label: '摄像头', icon: <Videocam sx={{ fontSize: 16 }} /> },
-  { type: 'screen', label: '屏幕录制', icon: <Monitor sx={{ fontSize: 16 }} /> },
+const CHANNELS = [
+  { id: 'teacher', label: '老师', icon: <Videocam sx={{ fontSize: 16 }} /> },
+  { id: 'student', label: '学生', icon: <Visibility sx={{ fontSize: 16 }} /> },
+  { id: 'board', label: '板书', icon: <Monitor sx={{ fontSize: 16 }} /> },
 ];
 
 function generateChannels(room: string) {
-  const count = Math.random() < 0.4 ? 2 : 3;
-  const channels: { id: string; label: string; type: string; online: boolean }[] = [];
-  let camIdx = 0;
-  let screenIdx = 0;
-  for (let i = 0; i < count; i++) {
-    const isCamera = Math.random() < 0.6;
-    if (isCamera) {
-      camIdx++;
-      channels.push({
-        id: `cam-${room}-${camIdx}`,
-        label: `摄像头 ${camIdx}`,
-        type: 'camera',
-        online: Math.random() < 0.9,
-      });
-    } else {
-      screenIdx++;
-      channels.push({
-        id: `screen-${room}-${screenIdx}`,
-        label: `屏幕录制 ${screenIdx}`,
-        type: 'screen',
-        online: Math.random() < 0.95,
-      });
-    }
-  }
-  return channels;
+  return CHANNELS.map((ch) => ({
+    ...ch,
+    online: Math.random() < 0.95,
+  }));
 }
 
 // ─── 远程命令常量 ───
@@ -377,7 +357,7 @@ const remoteCommands = [
 
 function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | null; open: boolean; onClose: () => void }) {
   const [channels] = useState(() => (classroom ? generateChannels(classroom.room) : []));
-  const [activeChannel, setActiveChannel] = useState(0);
+  const [activeChannel, setActiveChannel] = useState(2); // 默认选中板书
 
   const [snackbar, setSnackbar] = useState<{ open: boolean; message: string }>({ open: false, message: '' });
 
@@ -389,7 +369,6 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
 
   if (!classroom) return null;
   const current = channels[activeChannel];
-  const channelType = CHANNEL_TYPES.find((c) => c.type === current?.type);
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth>
@@ -413,9 +392,9 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
                 <Box
                   className="absolute inset-0 flex items-center justify-center"
                   sx={{
-                    background: current.type === 'camera'
-                      ? 'linear-gradient(135deg, #1e3a5f 0%, #2d5a87 30%, #1e3a5f 60%, #2d5a87 100%)'
-                      : 'linear-gradient(135deg, #1e293b 0%, #334155 30%, #0f172a 60%, #334155 100%)',
+                    background: current.id === 'board'
+                      ? 'linear-gradient(135deg, #1e293b 0%, #334155 30%, #0f172a 60%, #334155 100%)'
+                      : 'linear-gradient(135deg, #1e3a5f 0%, #2d5a87 30%, #1e3a5f 60%, #2d5a87 100%)',
                   }}
                 >
                   {/* 视频画面中的模拟元素 */}
@@ -431,9 +410,9 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
                   </Box>
                   {/* 视频中央提示 */}
                   <Box className="text-center z-10">
-                    {channelType?.icon && (
+                    {current.icon && (
                       <Box sx={{ fontSize: 48, color: 'rgba(255,255,255,0.2)', mb: 1 }}>
-                        {channelType.icon}
+                        {current.icon}
                       </Box>
                     )}
                     <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 0.5 }}>
@@ -473,12 +452,12 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
                 远程控制：
               </Typography>
               {remoteCommands.map((cmd) => (
-                <Tooltip key={cmd.label} title={!current ? '当前无视频连接' : ''}>
+                <Tooltip key={cmd.label} title={classroom.status === 'offline' ? '设备已离线，无法执行此操作' : ''}>
                   <span>
                     <Button
                       size="small"
                       variant="text"
-                      disabled={!current}
+                      disabled={classroom.status === 'offline'}
                       startIcon={cmd.icon}
                       onClick={() => handleRemoteCommand(cmd)}
                       sx={{
@@ -503,7 +482,6 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
           <Box className="w-56 flex-shrink-0 flex flex-col gap-1.5">
             <Typography variant="subtitle2" className="font-bold text-gray-700 mb-1">视频源列表</Typography>
             {channels.map((ch, i) => {
-              const ct = CHANNEL_TYPES.find((c) => c.type === ch.type);
               const isActive = i === activeChannel;
               return (
                 <Box
@@ -512,12 +490,19 @@ function PatrolDialog({ classroom, open, onClose }: { classroom: Classroom | nul
                   onClick={() => setActiveChannel(i)}
                 >
                   <Box sx={{ color: isActive ? '#3b82f6' : '#9ca3af' }}>
-                    {ct?.icon}
+                    {ch.icon}
                   </Box>
                   <Box className="flex-1 min-w-0">
-                    <Typography variant="body2" className={`${isActive ? 'font-medium text-blue-700' : 'text-gray-700'}`}>
-                      {ch.label}
-                    </Typography>
+                    <Box className="flex items-center gap-1">
+                      <Typography variant="body2" className={`${isActive ? 'font-medium text-blue-700' : 'text-gray-700'}`}>
+                        {ch.label}
+                      </Typography>
+                      {isActive && (
+                        <Typography variant="caption" sx={{ fontSize: 10, color: '#3b82f6', fontWeight: 600 }}>
+                          当前
+                        </Typography>
+                      )}
+                    </Box>
                     <Box className="flex items-center gap-1">
                       <Box sx={{ width: 5, height: 5, borderRadius: '50%', backgroundColor: ch.online ? '#22c55e' : '#ef4444' }} />
                       <Typography variant="caption" color="text.secondary">{ch.online ? '在线' : '离线'}</Typography>
