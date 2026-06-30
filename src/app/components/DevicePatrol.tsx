@@ -30,7 +30,7 @@ interface Classroom {
   floor: string;
   room: string;
   deviceCode: string;
-  status: 'normal' | 'pending' | 'inspected';
+  status: 'online' | 'offline';
   grade: string;
   classLabel: string;
   screenBg: string;
@@ -104,8 +104,7 @@ function generateClassrooms(): Classroom[] {
     for (const floor of building.floors) {
       for (const room of floor.rooms) {
         idx++;
-        const statusRand = Math.random();
-        const status: Classroom['status'] = statusRand < 0.5 ? 'normal' : statusRand < 0.75 ? 'pending' : 'inspected';
+        const status: Classroom['status'] = Math.random() < 0.8 ? 'online' : 'offline';
 
         // 随机桌面图标位置（3~5个图标）
         const iconCount = rand(3, 5);
@@ -267,9 +266,9 @@ function DesktopPreview({ classroom }: { classroom: Classroom }) {
           {classroom.room}教室 — {classroom.grade}{classroom.classLabel}
         </Typography>
         <Chip
-          label={classroom.status === 'normal' ? '正常' : classroom.status === 'pending' ? '待巡视' : '已巡视'}
+          label={classroom.status === 'online' ? '在线' : '离线'}
           size="small"
-          sx={{ ml: 'auto', height: 16, fontSize: 9, fontWeight: 600, backgroundColor: classroom.status === 'normal' ? 'rgba(22,163,74,0.7)' : classroom.status === 'pending' ? 'rgba(202,138,4,0.7)' : 'rgba(37,99,235,0.7)', color: '#fff', '& .MuiChip-label': { px: 0.5 } }}
+          sx={{ ml: 'auto', height: 16, fontSize: 9, fontWeight: 600, backgroundColor: classroom.status === 'online' ? 'rgba(22,163,74,0.7)' : 'rgba(156,163,175,0.7)', color: '#fff', '& .MuiChip-label': { px: 0.5 } }}
         />
       </Box>
 
@@ -569,7 +568,7 @@ export default function DevicePatrol() {
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set(['b-东教学楼']));
   const [viewMode, setViewMode] = useState<'table' | 'card'>('card');
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'normal' | 'pending' | 'inspected'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'online' | 'offline'>('all');
   const [patrolTarget, setPatrolTarget] = useState<Classroom | null>(null);
   const [patrolOpen, setPatrolOpen] = useState(false);
 
@@ -623,9 +622,8 @@ export default function DevicePatrol() {
   }, [selectedKey]);
 
   const statusConfig = {
-    normal: { label: '正常', color: '#16a34a', bg: '#dcfce7' },
-    pending: { label: '待巡视', color: '#ca8a04', bg: '#fef9c3' },
-    inspected: { label: '已巡视', color: '#2563eb', bg: '#dbeafe' },
+    online: { label: '在线', color: '#16a34a', bg: '#dcfce7' },
+    offline: { label: '离线', color: '#6b7280', bg: '#f3f4f6' },
   };
 
   return (
@@ -678,9 +676,8 @@ export default function DevicePatrol() {
                   displayEmpty
                 >
                   <MenuItem value="all">全部状态</MenuItem>
-                  <MenuItem value="normal">正常</MenuItem>
-                  <MenuItem value="pending">待巡视</MenuItem>
-                  <MenuItem value="inspected">已巡视</MenuItem>
+                  <MenuItem value="online">在线</MenuItem>
+                  <MenuItem value="offline">离线</MenuItem>
                 </Select>
               </FormControl>
               <TextField
