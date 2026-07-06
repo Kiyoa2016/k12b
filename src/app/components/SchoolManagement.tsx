@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import { Search, Add, Close, School, CheckCircle, Business } from '@mui/icons-material';
 import { useSchoolAuthorization } from '../store/SchoolAuthorizationContext';
+import { useSupplier } from '../store/SupplierContext';
 import { ALL_PAGES } from '../types/permissions';
 import Autocomplete from '@mui/material/Autocomplete';
 
@@ -27,9 +28,7 @@ interface School {
   level: string;
   phone: string;
   address: string;
-  dealerName: string;
-  dealerPhone: string;
-  dealerAddress: string;
+  supplierId: string;
 }
 
 // ─── Mock 数据 ───
@@ -40,54 +39,37 @@ const MOCK_SCHOOLS: School[] = [
     organization: '成都市教育局', province: '四川省', city: '成都市',
     district: '青羊区', type: '公办普通高中', level: '高中',
     phone: '028-86110278', address: '成都市青羊区文翁路街道1号',
-    dealerName: '四川云教科技有限公司', dealerPhone: '028-85551234',
-    dealerAddress: '成都市高新区天府大道1388号',
+    supplierId: 's-1',
   },
   {
     id: '2', code: 'SC510105B002', name: '成都市锦鑫中学',
     organization: '成都市教育局', province: '四川省', city: '成都市',
     district: '武侯区', type: '公办普通高中', level: '高中',
     phone: '028-85010222', address: '成都市武侯区石羊街道锦鑫路8号',
-    dealerName: '成都华育信息技术有限公司', dealerPhone: '028-85555678',
-    dealerAddress: '成都市武侯区科华北路99号',
+    supplierId: 's-2',
   },
   {
     id: '3', code: 'SC510106C003', name: '成都师资七中学（林荫校区）',
     organization: '成都市教育局', province: '四川省', city: '成都市',
     district: '武侯区', type: '公办普通高中', level: '高中',
     phone: '028-85454007', address: '成都市武侯区林荫街道1号',
-    dealerName: '四川云教科技有限公司', dealerPhone: '028-85551234',
-    dealerAddress: '成都市高新区天府大道1388号',
+    supplierId: 's-1',
   },
   {
     id: '4', code: 'SC510681D001', name: '广汉中学',
     organization: '广汉市教育局', province: '四川省', city: '德阳市',
     district: '广汉市', type: '公办普通高中', level: '高中',
     phone: '0838-5222333', address: '广汉市中山大道一段368号37号',
-    dealerName: '德阳博睿教育设备有限公司', dealerPhone: '0838-2500888',
-    dealerAddress: '德阳市旌阳区岷江西路一段88号',
+    supplierId: 's-3',
   },
   {
     id: '5', code: 'SC510781E001', name: '绵竹中学',
     organization: '绵竹市教育和体育局', province: '四川省', city: '德阳市',
     district: '绵竹市', type: '公办普通高中', level: '高中',
     phone: '0816-2366400', address: '绵竹市华山区四川路紫岩街30号',
-    dealerName: '德阳博睿教育设备有限公司', dealerPhone: '0838-2500888',
-    dealerAddress: '德阳市旌阳区岷江西路一段88号',
+    supplierId: 's-3',
   },
 ];
-
-// ─── 唯一经销商列表（为 Autocomplete 提供选项） ───
-
-interface DealerOption {
-  name: string;
-  phone: string;
-  address: string;
-}
-
-const DEALER_OPTIONS: DealerOption[] = Array.from(
-  new Map(MOCK_SCHOOLS.map((s) => [s.dealerName, { name: s.dealerName, phone: s.dealerPhone, address: s.dealerAddress }])).values()
-);
 
 // ─── 模块授权弹窗 ───
 
@@ -179,6 +161,7 @@ function ModuleAuthDialog({
 
 export default function SchoolManagement() {
   const { schoolAuths, setCurrentSchoolId } = useSchoolAuthorization();
+  const { suppliers, getSupplier, addSupplier, getSupplierByName } = useSupplier();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
@@ -195,7 +178,7 @@ export default function SchoolManagement() {
     name: '', code: '', accountName: '', accountPassword: '',
     phone: '', organization: '', type: '', level: '',
     location: '', address: '', description: '',
-    dealerName: '', dealerPhone: '', dealerAddress: '',
+    supplierId: '',
   });
 
   const [schools] = useState<School[]>(MOCK_SCHOOLS);
@@ -223,14 +206,13 @@ export default function SchoolManagement() {
       name: '', code: '', accountName: '', accountPassword: '',
       phone: '', organization: '', type: '', level: '',
       location: '', address: '', description: '',
-      dealerName: '', dealerPhone: '', dealerAddress: '',
+      supplierId: '',
     });
   };
 
   const filteredSchools = schools.filter((school) =>
     school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    school.code.includes(searchTerm) ||
-    school.dealerName.includes(searchTerm)
+    school.code.includes(searchTerm)
   );
 
   const pagedSchools = filteredSchools.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
@@ -251,7 +233,7 @@ export default function SchoolManagement() {
         {/* 搜索栏 */}
         <Box className="mb-4">
           <TextField
-            size="small" placeholder="搜索学校名称、编号或经销商..."
+            size="small" placeholder="搜索学校名称、编号..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             InputProps={{
@@ -301,8 +283,9 @@ export default function SchoolManagement() {
                         <TableCell>{school.organization}</TableCell>
                         <TableCell>
                           <Box>
-                            <Typography variant="body2">{school.dealerName}</Typography>
-                            <Typography variant="caption" color="text.secondary">{school.dealerPhone}</Typography>
+                            <Typography variant="body2">
+                              {getSupplier(school.supplierId)?.name || '—'}
+                            </Typography>
                           </Box>
                         </TableCell>
                         <TableCell>{school.phone}</TableCell>
@@ -355,7 +338,7 @@ export default function SchoolManagement() {
 
                 <Tabs value={viewTab} onChange={(_, v) => setViewTab(v)} sx={{ mb: 2, borderBottom: '1px solid #e5e7eb' }}>
                   <Tab label="基本信息" />
-                  <Tab label="经销商信息" />
+                  <Tab label="供应商信息" />
                   <Tab label="模块授权" />
                 </Tabs>
 
@@ -401,23 +384,38 @@ export default function SchoolManagement() {
                   </Grid>
                 )}
 
-                {/* Tab 1: 经销商信息 */}
-                {viewTab === 1 && (
-                  <Grid container spacing={3}>
-                    <Grid item xs={6}>
-                      <Typography variant="body2" color="text.secondary" className="mb-1">经销商名称</Typography>
-                      <Typography variant="body1" className="font-medium">{selectedSchool.dealerName}</Typography>
+                {/* Tab 1: 供应商信息 */}
+                {viewTab === 1 && (() => {
+                  const supp = getSupplier(selectedSchool.supplierId);
+                  return (
+                    <Grid container spacing={3}>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary" className="mb-1">供应商名称</Typography>
+                        <Typography variant="body1" className="font-medium">{supp?.name || '—'}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary" className="mb-1">联系人</Typography>
+                        <Typography variant="body1">{supp?.contactPerson || '—'}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary" className="mb-1">联系电话</Typography>
+                        <Typography variant="body1">{supp?.phone || '—'}</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="body2" color="text.secondary" className="mb-1">统一社会信用代码</Typography>
+                        <Typography variant="body1">{supp?.unifiedCode || '—'}</Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary" className="mb-1">地址</Typography>
+                        <Typography variant="body1">{supp?.address || '—'}</Typography>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Typography variant="body2" color="text.secondary" className="mb-1">合同信息</Typography>
+                        <Typography variant="body1">{supp?.contractInfo || '—'}</Typography>
+                      </Grid>
                     </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="body2" color="text.secondary" className="mb-1">经销商电话</Typography>
-                      <Typography variant="body1">{selectedSchool.dealerPhone}</Typography>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Typography variant="body2" color="text.secondary" className="mb-1">经销商地址</Typography>
-                      <Typography variant="body1">{selectedSchool.dealerAddress}</Typography>
-                    </Grid>
-                  </Grid>
-                )}
+                  );
+                })()}
 
                 {/* Tab 2: 模块授权 */}
                 {viewTab === 2 && (
@@ -613,34 +611,31 @@ export default function SchoolManagement() {
                     </td>
                   </tr>
 
-                  {/* 第7行：经销商信息 */}
+                  {/* 第7行：供应商信息 */}
                   <tr>
                     <td colSpan={2}>
-                      <Typography variant="subtitle2" className="font-bold text-gray-700 mb-2">经销商信息</Typography>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
                       <Box>
-                        <Typography variant="body2" className="mb-2">经销商名称:</Typography>
+                        <Typography variant="body2" className="mb-2">供应商:</Typography>
                         <Autocomplete
                           freeSolo
                           size="small"
-                          options={DEALER_OPTIONS}
+                          options={suppliers}
                           getOptionLabel={(option) => typeof option === 'string' ? option : option.name}
-                          value={newSchool.dealerName || null}
+                          value={suppliers.find(s => s.id === newSchool.supplierId) || null}
                           onInputChange={(_, value) => {
-                            setNewSchool({ ...newSchool, dealerName: value });
-                            // 输入变化时不自动填充
+                            setNewSchool({ ...newSchool, supplierId: '' });
                           }}
                           onChange={(_, value) => {
                             if (value && typeof value !== 'string') {
-                              setNewSchool({
-                                ...newSchool,
-                                dealerName: value.name,
-                                dealerPhone: value.phone,
-                                dealerAddress: value.address,
-                              });
+                              setNewSchool({ ...newSchool, supplierId: value.id });
+                            } else if (value && typeof value === 'string') {
+                              const existing = getSupplierByName(value);
+                              if (existing) {
+                                setNewSchool({ ...newSchool, supplierId: existing.id });
+                              } else {
+                                const created = addSupplier({ name: value, phone: '', address: '', contactPerson: '', unifiedCode: '', contractInfo: '' });
+                                setNewSchool({ ...newSchool, supplierId: created.id });
+                              }
                             }
                           }}
                           renderOption={(props, option) => {
@@ -649,7 +644,9 @@ export default function SchoolManagement() {
                               <Box component="li" key={key} {...rest}>
                                 <Box>
                                   <Typography variant="body2" className="font-medium">{option.name}</Typography>
-                                  <Typography variant="caption" color="text.secondary">{option.phone}</Typography>
+                                  <Typography variant="caption" color="text.secondary">
+                                    {option.contactPerson} | {option.phone}
+                                  </Typography>
                                 </Box>
                               </Box>
                             );
@@ -658,7 +655,7 @@ export default function SchoolManagement() {
                             <TextField
                               {...params}
                               fullWidth
-                              placeholder="搜索或输入经销商名称"
+                              placeholder="搜索或输入供应商名称"
                               InputProps={{
                                 ...params.InputProps,
                                 startAdornment: (
@@ -670,24 +667,6 @@ export default function SchoolManagement() {
                             />
                           )}
                         />
-                      </Box>
-                    </td>
-                    <td>
-                      <Box>
-                        <Typography variant="body2" className="mb-2">经销商电话:</Typography>
-                        <TextField fullWidth size="small" value={newSchool.dealerPhone}
-                          onChange={(e) => setNewSchool({ ...newSchool, dealerPhone: e.target.value })}
-                          placeholder="请输入经销商电话" />
-                      </Box>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td colSpan={2}>
-                      <Box>
-                        <Typography variant="body2" className="mb-2">经销商地址:</Typography>
-                        <TextField fullWidth size="small" value={newSchool.dealerAddress}
-                          onChange={(e) => setNewSchool({ ...newSchool, dealerAddress: e.target.value })}
-                          placeholder="请输入经销商地址" />
                       </Box>
                     </td>
                   </tr>
