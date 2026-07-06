@@ -210,10 +210,12 @@ export default function SchoolManagement() {
     });
   };
 
-  const filteredSchools = schools.filter((school) =>
-    school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    school.code.includes(searchTerm)
-  );
+  const filteredSchools = schools.filter((school) => {
+    const supplierName = getSupplier(school.supplierId)?.name || '';
+    return school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      school.code.includes(searchTerm) ||
+      supplierName.includes(searchTerm);
+  });
 
   const pagedSchools = filteredSchools.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
@@ -633,7 +635,7 @@ export default function SchoolManagement() {
                               if (existing) {
                                 setNewSchool({ ...newSchool, supplierId: existing.id });
                               } else {
-                                const created = addSupplier({ name: value, phone: '', address: '', contactPerson: '', unifiedCode: '', contractInfo: '' });
+                                const created = addSupplier({ name: value, phone: '', address: '', contactPerson: value, unifiedCode: '', contractInfo: '' });
                                 setNewSchool({ ...newSchool, supplierId: created.id });
                               }
                             }

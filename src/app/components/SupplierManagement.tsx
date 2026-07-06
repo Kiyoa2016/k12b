@@ -216,7 +216,9 @@ export default function SupplierManagement() {
                         <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
                           <Box className="text-center text-gray-400">
                             <Business sx={{ fontSize: 48 }} className="mb-2" />
-                            <Typography variant="body2">暂无供应商，点击「添加供应商」创建</Typography>
+                            <Typography variant="body2">
+                            {suppliers.length === 0 ? '暂无供应商，点击「添加供应商」创建' : '未找到匹配的供应商'}
+                          </Typography>
                           </Box>
                         </TableCell>
                       </TableRow>
