@@ -81,6 +81,13 @@ export default function SupplierManagement() {
   const getRelatedSchools = (supplierId: string) =>
     allSchools.filter((s) => s.supplierId === supplierId);
 
+  // ─── 供应商 OPS 设备总数 ───
+
+  const getOPSDeviceTotal = (supplierId: string) =>
+    allSchools
+      .filter((s) => s.supplierId === supplierId)
+      .reduce((sum, s) => sum + s.opsDeviceCount, 0);
+
   // ─── 添加供应商 ───
 
   const handleAdd = () => {
@@ -208,13 +215,14 @@ export default function SupplierManagement() {
                       <TableCell sx={{ fontWeight: 600 }}>联系电话</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>统一社会信用代码</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>关联学校数</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>OPS设备总数</TableCell>
                       <TableCell sx={{ fontWeight: 600 }}>操作</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {pagedSuppliers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} align="center" sx={{ py: 8 }}>
+                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
                           <Box className="text-center text-gray-400">
                             <Business sx={{ fontSize: 48 }} className="mb-2" />
                             <Typography variant="body2">
@@ -246,6 +254,11 @@ export default function SupplierManagement() {
                             </Typography>
                           </TableCell>
                           <TableCell>{getSchoolCount(supplier.id)}</TableCell>
+                          <TableCell>
+                            <Typography variant="body2" className="font-semibold text-blue-600">
+                              {getOPSDeviceTotal(supplier.id)}
+                            </Typography>
+                          </TableCell>
                           <TableCell>
                             <Box className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                               <IconButton
