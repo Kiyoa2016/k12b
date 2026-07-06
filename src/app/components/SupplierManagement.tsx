@@ -4,11 +4,11 @@ import {
   Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, TablePagination,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  IconButton, InputAdornment, Paper, Divider,
+  IconButton, InputAdornment, Paper,
 } from '@mui/material';
 import {
   Add, Edit, Delete, Search, Business, Close,
-  School as SchoolIcon, Phone, Person, Badge, Description,
+  School as SchoolIcon,
 } from '@mui/icons-material';
 import { useSupplier, type Supplier } from '../store/SupplierContext';
 
@@ -43,7 +43,7 @@ export default function SupplierManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
+  const [schoolDialogSupplier, setSchoolDialogSupplier] = useState<Supplier | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
@@ -123,10 +123,6 @@ export default function SupplierManagement() {
     if (!editingSupplier || !formData.name || !formData.contactPerson) return;
     updateSupplier(editingSupplier.id, formData);
     setEditDialogOpen(false);
-    // 同步更新右侧详情面板
-    if (selectedSupplier?.id === editingSupplier.id) {
-      setSelectedSupplier({ ...editingSupplier, ...formData });
-    }
     resetForm();
   };
 
@@ -140,7 +136,6 @@ export default function SupplierManagement() {
   const handleDelete = () => {
     if (!supplierToDelete) return;
     deleteSupplier(supplierToDelete.id);
-    if (selectedSupplier?.id === supplierToDelete.id) setSelectedSupplier(null);
     setDeleteDialogOpen(false);
     setSupplierToDelete(null);
   };
@@ -161,12 +156,12 @@ export default function SupplierManagement() {
     setAddDialogOpen(true);
   };
 
-  const selectSupplier = (supplier: Supplier) => {
-    setSelectedSupplier(supplier);
+  const openSchoolDialog = (supplier: Supplier) => {
+    setSchoolDialogSupplier(supplier);
   };
 
-  const closeDetail = () => {
-    setSelectedSupplier(null);
+  const closeSchoolDialog = () => {
+    setSchoolDialogSupplier(null);
   };
 
   // ─── 渲染 ───
@@ -201,240 +196,91 @@ export default function SupplierManagement() {
           />
         </Box>
 
-        {/* 左右分栏布局 */}
-        <Box className="flex gap-6">
-          {/* 左侧：供应商表格 (60%) */}
-          <Box className="w-[60%]">
-            <Paper className="rounded-lg overflow-hidden">
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow className="bg-gray-50">
-                      <TableCell sx={{ fontWeight: 600 }}>供应商名称</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>联系人</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>联系电话</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>统一社会信用代码</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>关联学校数</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>OPS设备总数</TableCell>
-                      <TableCell sx={{ fontWeight: 600 }}>操作</TableCell>
+        {/* 供应商表格 */}
+        <Paper className="rounded-lg overflow-hidden">
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow className="bg-gray-50">
+                  <TableCell sx={{ fontWeight: 600 }}>供应商名称</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>联系人</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>联系电话</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>统一社会信用代码</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>关联学校数</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>OPS设备总数</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>操作</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {pagedSuppliers.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                      <Box className="text-center text-gray-400">
+                        <Business sx={{ fontSize: 48 }} className="mb-2" />
+                        <Typography variant="body2">
+                        {suppliers.length === 0 ? '暂无供应商，点击「添加供应商」创建' : '未找到匹配的供应商'}
+                      </Typography>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  pagedSuppliers.map((supplier) => (
+                    <TableRow key={supplier.id} hover>
+                      <TableCell>
+                        <Typography variant="body2" className="font-medium">
+                          {supplier.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{supplier.contactPerson}</TableCell>
+                      <TableCell>{supplier.phone}</TableCell>
+                      <TableCell>
+                        <Typography variant="body2" className="font-mono text-xs">
+                          {supplier.unifiedCode}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className="text-blue-600 underline underline-offset-2 cursor-pointer hover:text-blue-800"
+                          onClick={() => openSchoolDialog(supplier)}
+                        >
+                          {getSchoolCount(supplier.id)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" className="font-semibold text-blue-600">
+                          {getOPSDeviceTotal(supplier.id)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Box className="flex gap-1">
+                          <IconButton size="small" color="primary" onClick={() => openEdit(supplier)}>
+                            <Edit fontSize="small" />
+                          </IconButton>
+                          <IconButton size="small" color="error" onClick={() => openDelete(supplier)}>
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {pagedSuppliers.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                          <Box className="text-center text-gray-400">
-                            <Business sx={{ fontSize: 48 }} className="mb-2" />
-                            <Typography variant="body2">
-                            {suppliers.length === 0 ? '暂无供应商，点击「添加供应商」创建' : '未找到匹配的供应商'}
-                          </Typography>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      pagedSuppliers.map((supplier) => (
-                        <TableRow
-                          key={supplier.id}
-                          hover
-                          onClick={() => selectSupplier(supplier)}
-                          className={`cursor-pointer ${
-                            selectedSupplier?.id === supplier.id ? 'bg-blue-50' : ''
-                          }`}
-                        >
-                          <TableCell>
-                            <Typography variant="body2" className="font-medium">
-                              {supplier.name}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{supplier.contactPerson}</TableCell>
-                          <TableCell>{supplier.phone}</TableCell>
-                          <TableCell>
-                            <Typography variant="body2" className="font-mono text-xs">
-                              {supplier.unifiedCode}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>{getSchoolCount(supplier.id)}</TableCell>
-                          <TableCell>
-                            <Typography variant="body2" className="font-semibold text-blue-600">
-                              {getOPSDeviceTotal(supplier.id)}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Box className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => openEdit(supplier)}
-                              >
-                                <Edit fontSize="small" />
-                              </IconButton>
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={() => openDelete(supplier)}
-                              >
-                                <Delete fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              <TablePagination
-                component="div"
-                count={filteredSuppliers.length}
-                page={page}
-                onPageChange={(_, p) => setPage(p)}
-                rowsPerPage={rowsPerPage}
-                onRowsPerPageChange={(e) => {
-                  setRowsPerPage(parseInt(e.target.value, 10));
-                  setPage(0);
-                }}
-                labelRowsPerPage="每页行数："
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} 共 ${count}`}
-              />
-            </Paper>
-          </Box>
-
-          {/* 右侧：供应商详情面板 (40%) */}
-          <Box className="w-[40%]">
-            {selectedSupplier ? (
-              <Paper className="rounded-lg p-6">
-                {/* 头部 */}
-                <Box className="flex items-center justify-between mb-4">
-                  <Box className="flex items-center gap-2">
-                    <Business className="text-blue-600" />
-                    <Typography variant="h6" className="font-bold">
-                      {selectedSupplier.name}
-                    </Typography>
-                  </Box>
-                  <IconButton size="small" onClick={closeDetail}>
-                    <Close />
-                  </IconButton>
-                </Box>
-
-                <Divider className="mb-4" />
-
-                {/* 基本信息 */}
-                <Typography variant="subtitle2" className="font-bold text-gray-700 mb-3">
-                  基本信息
-                </Typography>
-
-                <Box className="space-y-3">
-                  {/* 联系人 */}
-                  <Box className="flex items-center gap-2">
-                    <Person fontSize="small" className="text-gray-400" />
-                    <Typography variant="body2" color="text.secondary" className="w-24 shrink-0">
-                      联系人
-                    </Typography>
-                    <Typography variant="body2" className="font-medium">
-                      {selectedSupplier.contactPerson}
-                    </Typography>
-                  </Box>
-
-                  {/* 联系电话 */}
-                  <Box className="flex items-center gap-2">
-                    <Phone fontSize="small" className="text-gray-400" />
-                    <Typography variant="body2" color="text.secondary" className="w-24 shrink-0">
-                      联系电话
-                    </Typography>
-                    <Typography variant="body2">
-                      {selectedSupplier.phone}
-                    </Typography>
-                  </Box>
-
-                  {/* 地址 */}
-                  <Box className="flex items-center gap-2">
-                    <Business fontSize="small" className="text-gray-400" />
-                    <Typography variant="body2" color="text.secondary" className="w-24 shrink-0">
-                      地址
-                    </Typography>
-                    <Typography variant="body2">
-                      {selectedSupplier.address}
-                    </Typography>
-                  </Box>
-
-                  {/* 统一社会信用代码 */}
-                  <Box className="flex items-center gap-2">
-                    <Badge fontSize="small" className="text-gray-400" />
-                    <Typography variant="body2" color="text.secondary" className="w-24 shrink-0">
-                      信用代码
-                    </Typography>
-                    <Typography variant="body2" className="font-mono text-xs">
-                      {selectedSupplier.unifiedCode}
-                    </Typography>
-                  </Box>
-
-                  {/* 合同信息 */}
-                  <Box className="flex items-center gap-2">
-                    <Description fontSize="small" className="text-gray-400" />
-                    <Typography variant="body2" color="text.secondary" className="w-24 shrink-0">
-                      合同信息
-                    </Typography>
-                    <Typography variant="body2">
-                      {selectedSupplier.contractInfo}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <Divider className="my-4" />
-
-                {/* 关联学校 */}
-                <Box className="mb-3">
-                  <Typography variant="subtitle2" className="font-bold text-gray-700 mb-3">
-                    关联学校 ({getSchoolCount(selectedSupplier.id)})
-                  </Typography>
-
-                  {getRelatedSchools(selectedSupplier.id).length === 0 ? (
-                    <Box className="text-center py-6 text-gray-400">
-                      <SchoolIcon sx={{ fontSize: 36 }} className="mb-2" />
-                      <Typography variant="body2">暂无关联学校</Typography>
-                    </Box>
-                  ) : (
-                    <Box className="space-y-2">
-                      {getRelatedSchools(selectedSupplier.id).map((school) => (
-                        <Paper
-                          key={school.id}
-                          variant="outlined"
-                          className="p-3 rounded-lg"
-                        >
-                          <Box className="flex items-start gap-2">
-                            <SchoolIcon fontSize="small" className="text-blue-500 mt-0.5" />
-                            <Box>
-                              <Typography variant="body2" className="font-medium">
-                                {school.name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary" className="block">
-                                {school.code}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {school.organization}
-                              </Typography>
-                              <Typography variant="caption" className="block mt-1 text-blue-600 font-medium">
-                                OPS设备总数: {school.opsDeviceCount}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Paper>
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-              </Paper>
-            ) : (
-              /* 未选择供应商时的占位提示 */
-              <Paper className="rounded-lg p-6 flex flex-col items-center justify-center min-h-[400px] text-gray-400">
-                <Business sx={{ fontSize: 64 }} className="mb-4 opacity-30" />
-                <Typography variant="body1" className="text-gray-400">
-                  请从左侧选择供应商查看详情
-                </Typography>
-              </Paper>
-            )}
-          </Box>
-        </Box>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            component="div"
+            count={filteredSuppliers.length}
+            page={page}
+            onPageChange={(_, p) => setPage(p)}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            labelRowsPerPage="每页行数："
+            labelDisplayedRows={({ from, to, count }) => `${from}-${to} 共 ${count}`}
+          />
+        </Paper>
 
         {/* ====== 添加供应商对话框 ====== */}
         <Dialog open={addDialogOpen} onClose={() => setAddDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -653,6 +499,61 @@ export default function SupplierManagement() {
             >
               确定
             </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* ====== 关联学校弹窗 ====== */}
+        <Dialog open={Boolean(schoolDialogSupplier)} onClose={closeSchoolDialog} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb', pb: 2 }}>
+            <Box className="flex items-center justify-between">
+              <Box className="flex items-center gap-2">
+                <SchoolIcon className="text-blue-600" />
+                <Typography variant="h6">
+                  {schoolDialogSupplier?.name} — 关联学校
+                </Typography>
+              </Box>
+              <IconButton onClick={closeSchoolDialog} size="small"><Close /></IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent sx={{ pt: '16px !important' }}>
+            {schoolDialogSupplier && (() => {
+              const schools = getRelatedSchools(schoolDialogSupplier.id);
+              return schools.length === 0 ? (
+                <Box className="text-center py-10 text-gray-400">
+                  <SchoolIcon sx={{ fontSize: 48 }} className="mb-2" />
+                  <Typography variant="body2">暂无关联学校</Typography>
+                </Box>
+              ) : (
+                <Box className="py-2 space-y-3">
+                  {schools.map((school) => (
+                    <Paper key={school.id} variant="outlined" className="p-4 rounded-lg">
+                      <Box className="flex items-start gap-3">
+                        <SchoolIcon className="text-blue-500 mt-0.5" />
+                        <Box className="flex-1">
+                          <Typography variant="body1" className="font-medium">
+                            {school.name}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" className="block mt-1">
+                            {school.code}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary" className="block">
+                            {school.organization}
+                          </Typography>
+                          <Box className="mt-2 flex items-center gap-1">
+                            <Typography variant="caption" className="text-blue-600 font-semibold">
+                              OPS设备总数: {school.opsDeviceCount}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  ))}
+                </Box>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions className="px-6 pb-4 border-t">
+            <Button onClick={closeSchoolDialog} variant="contained">关闭</Button>
           </DialogActions>
         </Dialog>
 
