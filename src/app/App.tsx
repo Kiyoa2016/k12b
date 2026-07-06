@@ -52,6 +52,7 @@ import {
   Security,
   Cloud,
   School,
+  Business,
   Mic,
   Dashboard,
   Devices,
@@ -60,6 +61,8 @@ import {
 } from '@mui/icons-material';
 import TeacherManagement from './components/TeacherManagement';
 import SchoolManagement from './components/SchoolManagement';
+import SupplierManagement from './components/SupplierManagement';
+import { SupplierProvider } from './store/SupplierContext';
 import QuestionBankManagement from './components/QuestionBankManagement';
 import ClassroomManagement from './components/ClassroomManagement';
 
@@ -99,7 +102,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'supplier' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -255,6 +258,7 @@ export default function App() {
       icon: <Cloud />,
       children: [
         { id: 'school', label: '学校管理', icon: <People />, pageId: 'school' },
+        { id: 'supplier', label: '供应商管理', icon: <Business />, pageId: 'supplier' },
         {
           id: 'training-video-parent', label: '培训视频', icon: <Videocam />,
           children: [
@@ -314,6 +318,7 @@ export default function App() {
   return (
     <PermissionProvider>
     <SchoolAuthorizationProvider>
+    <SupplierProvider>
     <Box className="min-h-screen bg-gray-50">
       {/* 顶部导航栏 */}
       <AppBar position="static" elevation={0} className="bg-white border-b border-gray-200">
@@ -385,6 +390,8 @@ export default function App() {
         <TeacherManagement />
       ) : currentPage === 'school' ? (
         <SchoolManagement />
+      ) : currentPage === 'supplier' ? (
+        <SupplierManagement />
       ) : currentPage === 'questionbank' ? (
         <QuestionBankManagement />
       ) : currentPage === 'lecture' ? (
@@ -783,6 +790,7 @@ export default function App() {
         />
       )}
     </Box>
+    </SupplierProvider>
     </SchoolAuthorizationProvider>
     </PermissionProvider>
   );
