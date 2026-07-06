@@ -199,13 +199,15 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                 }}
               />
 
-              {/* 快捷模板 — 右上角浮在输入框上 */}
-              <FormControl size="small" sx={{ position: 'absolute', top: 4, right: 4, zIndex: 1, minWidth: 120, maxWidth: 200 }}>
-                <Select
-                  value=""
-                  displayEmpty
-                  onChange={(e) => handleTemplateSelect(e.target.value)}
-                  renderValue={() => <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: 11, fontWeight: 600 }}>📋 选择模板</Typography>}
+              {/* 标题 + 消息模板 — 同一行浮在输入框顶部 */}
+              <Box sx={{ position: 'absolute', top: 4, left: 8, right: 4, zIndex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between', pointerEvents: 'none' }}>
+                <Typography variant="caption" sx={{ fontWeight: 700, color: '#374151', fontSize: 11 }}>消息内容</Typography>
+                <FormControl size="small" sx={{ minWidth: 120, maxWidth: 160, pointerEvents: 'auto' }}>
+                  <Select
+                    value=""
+                    displayEmpty
+                    onChange={(e) => handleTemplateSelect(e.target.value)}
+                    renderValue={() => <Typography variant="caption" sx={{ color: '#9ca3af', fontSize: 11, fontWeight: 600 }}>📋 消息模板</Typography>}
                   sx={{
                     backgroundColor: 'rgba(255,255,255,0.92)',
                     backdropFilter: 'blur(4px)',
@@ -231,6 +233,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                   ])}
                 </Select>
               </FormControl>
+            </Box>
 
               {/* 字数统计 — 右下角浮在输入框上 */}
               <Typography

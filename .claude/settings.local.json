@@ -58,7 +58,8 @@
       "Bash(kill %1)",
       "Bash(wait %1)",
       "Bash(pnpm run *)",
-      "Bash(pnpm ls *)"
+      "Bash(pnpm ls *)",
+      "Skill(run)"
     ]
   }
 }

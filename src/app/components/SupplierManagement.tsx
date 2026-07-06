@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Box, Container, Typography, TextField, Button,
   Table, TableBody, TableCell, TableContainer,
@@ -68,6 +68,9 @@ export default function SupplierManagement() {
   );
 
   const pagedSuppliers = filteredSuppliers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  // 搜索时重置页码
+  useEffect(() => { setPage(0); }, [searchTerm]);
 
   // ─── 供应商关联学校数 ───
 

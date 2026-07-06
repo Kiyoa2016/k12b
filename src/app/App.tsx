@@ -62,7 +62,7 @@ import TeacherManagement from './components/TeacherManagement';
 import SchoolManagement from './components/SchoolManagement';
 import QuestionBankManagement from './components/QuestionBankManagement';
 import ClassroomManagement from './components/ClassroomManagement';
-import LiveStream from './components/LiveStream';
+
 import LectureEvaluation from './components/LectureEvaluation';
 import LectureEvaluationDetail from './components/LectureEvaluationDetail';
 import CloudClassroom from './components/CloudClassroom';
@@ -99,7 +99,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'livestream' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -296,7 +296,6 @@ export default function App() {
             { id: 'news-broadcast', label: '时事转播', pageId: 'news-broadcast' },
             { id: 'classroom', label: '教室管理', pageId: 'classroom' },
             { id: 'device-mgmt', label: '设备管理', pageId: 'device-mgmt' },
-            { id: 'livestream', label: '实时流', pageId: 'livestream' },
             { id: 'security-policy', label: '安全策略', pageId: 'security-policy' },
             { id: 'smart-control', label: '智慧管控', pageId: 'smart-control' },
             { id: 'operation-log', label: '运行日志', pageId: 'operation-log' },
@@ -423,8 +422,6 @@ export default function App() {
         <OperationLog />
       ) : currentPage === 'classroom' ? (
         <ClassroomManagement />
-      ) : currentPage === 'livestream' ? (
-        <LiveStream />
       ) : currentPage === 'training-video' ? (
         <TrainingVideo onOpenPlay={handleOpenTrainingPlay} />
       ) : currentPage === 'training-video-play' && trainingVideoDetail ? (
