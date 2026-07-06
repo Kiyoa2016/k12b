@@ -20,17 +20,18 @@ interface SchoolBrief {
   name: string;
   organization: string;
   supplierId: string;
+  opsDeviceCount: number;
 }
 
 // ─── Mock 学校数据（关联供应商） ───
 
 function loadSchools(): SchoolBrief[] {
   return [
-    { id: '1', code: 'SC510104A001', name: '成都市仁寿中学（双流校区）', organization: '成都市教育局', supplierId: 's-1' },
-    { id: '2', code: 'SC510105B002', name: '成都市锦鑫中学', organization: '成都市教育局', supplierId: 's-2' },
-    { id: '3', code: 'SC510106C003', name: '成都师资七中学（林荫校区）', organization: '成都市教育局', supplierId: 's-1' },
-    { id: '4', code: 'SC510681D001', name: '广汉中学', organization: '广汉市教育局', supplierId: 's-3' },
-    { id: '5', code: 'SC510781E001', name: '绵竹中学', organization: '绵竹市教育和体育局', supplierId: 's-3' },
+    { id: '1', code: 'SC510104A001', name: '成都市仁寿中学（双流校区）', organization: '成都市教育局', supplierId: 's-1', opsDeviceCount: 48 },
+    { id: '2', code: 'SC510105B002', name: '成都市锦鑫中学', organization: '成都市教育局', supplierId: 's-2', opsDeviceCount: 32 },
+    { id: '3', code: 'SC510106C003', name: '成都师资七中学（林荫校区）', organization: '成都市教育局', supplierId: 's-1', opsDeviceCount: 56 },
+    { id: '4', code: 'SC510681D001', name: '广汉中学', organization: '广汉市教育局', supplierId: 's-3', opsDeviceCount: 24 },
+    { id: '5', code: 'SC510781E001', name: '绵竹中学', organization: '绵竹市教育和体育局', supplierId: 's-3', opsDeviceCount: 36 },
   ];
 }
 
@@ -398,6 +399,9 @@ export default function SupplierManagement() {
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
                                 {school.organization}
+                              </Typography>
+                              <Typography variant="caption" className="block mt-1 text-blue-600 font-medium">
+                                OPS设备总数: {school.opsDeviceCount}
                               </Typography>
                             </Box>
                           </Box>
