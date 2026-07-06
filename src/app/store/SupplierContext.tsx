@@ -6,6 +6,12 @@ import {
   type ReactNode,
 } from 'react';
 
+export interface ContractFile {
+  name: string;      // 文件名，如 "合同2026.pdf"
+  data: string;      // Base64 编码的文件内容
+  type: string;      // MIME 类型，如 "application/pdf"
+}
+
 export interface Supplier {
   id: string;
   name: string;
@@ -13,7 +19,7 @@ export interface Supplier {
   address: string;
   contactPerson: string;
   unifiedCode: string;
-  contractInfo: string;
+  contractFile: ContractFile | null;
 }
 
 // 从现有 Mock 学校经销商提取的初始数据
@@ -25,7 +31,7 @@ const DEFAULT_SUPPLIERS: Supplier[] = [
     address: '成都市高新区天府大道1388号',
     contactPerson: '张经理',
     unifiedCode: '91510100MA6CM*****',
-    contractInfo: '2026年度框架协议',
+    contractFile: null,
   },
   {
     id: 's-2',
@@ -34,7 +40,7 @@ const DEFAULT_SUPPLIERS: Supplier[] = [
     address: '成都市武侯区科华北路99号',
     contactPerson: '李经理',
     unifiedCode: '91510100MA6CM*****',
-    contractInfo: '2026年度框架协议',
+    contractFile: null,
   },
   {
     id: 's-3',
@@ -43,7 +49,7 @@ const DEFAULT_SUPPLIERS: Supplier[] = [
     address: '德阳市旌阳区岷江西路一段88号',
     contactPerson: '王经理',
     unifiedCode: '91510600MA6CM*****',
-    contractInfo: '2026年度框架协议',
+    contractFile: null,
   },
 ];
 
@@ -59,10 +65,28 @@ interface SupplierContextType {
 const SupplierContext = createContext<SupplierContextType | null>(null);
 
 export function SupplierProvider({ children }: { children: ReactNode }) {
+  /** 迁移旧数据：将 contractInfo 字符串转为 contractFile */
+  function migrateSupplier(data: Record<string, unknown>): Supplier {
+    if ('contractFile' in data) {
+      return data as unknown as Supplier;
+    }
+    const old = data as unknown as Supplier & { contractInfo?: string };
+    const contractInfo = old.contractInfo;
+    return {
+      ...old,
+      contractFile: contractInfo
+        ? { name: `${contractInfo}.pdf`, data: '', type: 'application/pdf' }
+        : null,
+    };
+  }
+
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
     try {
       const saved = localStorage.getItem('app-suppliers');
-      if (saved) return JSON.parse(saved) as Supplier[];
+      if (saved) {
+        const raw = JSON.parse(saved) as Record<string, unknown>[];
+        return raw.map(migrateSupplier);
+      }
     } catch { /* ignore */ }
     return DEFAULT_SUPPLIERS;
   });

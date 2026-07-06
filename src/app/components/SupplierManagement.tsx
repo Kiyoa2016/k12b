@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Box, Container, Typography, TextField, Button,
   Table, TableBody, TableCell, TableContainer,
@@ -8,9 +8,29 @@ import {
 } from '@mui/material';
 import {
   Add, Edit, Delete, Search, Business, Close,
+  Upload, Description, PictureAsPdf, Image as ImageIcon,
+  Download,
   School as SchoolIcon,
 } from '@mui/icons-material';
-import { useSupplier, type Supplier } from '../store/SupplierContext';
+import { useSupplier, type Supplier, type ContractFile } from '../store/SupplierContext';
+
+// ─── 工具：判断文件是否为图片 ───
+
+function isImageType(mime: string) {
+  return ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/bmp'].includes(mime);
+}
+
+function isPdfType(mime: string) {
+  return mime === 'application/pdf';
+}
+
+// ─── 工具：格式化文件大小 ───
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 // ─── 学校数据接口（与 SchoolManagement 保持一致） ───
 
@@ -55,8 +75,13 @@ export default function SupplierManagement() {
     address: '',
     contactPerson: '',
     unifiedCode: '',
-    contractInfo: '',
+    contractFile: null as ContractFile | null,
   });
+
+  // ─── 预览对话框状态 ───
+  const [previewSupplier, setPreviewSupplier] = useState<Supplier | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const allSchools = useMemo(() => loadSchools(), []);
 
@@ -98,7 +123,7 @@ export default function SupplierManagement() {
       address: formData.address,
       contactPerson: formData.contactPerson,
       unifiedCode: formData.unifiedCode,
-      contractInfo: formData.contractInfo,
+      contractFile: formData.contractFile,
     });
     setAddDialogOpen(false);
     resetForm();
@@ -114,7 +139,7 @@ export default function SupplierManagement() {
       address: supplier.address,
       contactPerson: supplier.contactPerson,
       unifiedCode: supplier.unifiedCode,
-      contractInfo: supplier.contractInfo,
+      contractFile: supplier.contractFile,
     });
     setEditDialogOpen(true);
   };
@@ -143,12 +168,46 @@ export default function SupplierManagement() {
   // ─── 工具函数 ───
 
   const resetForm = () => {
-    setFormData({ name: '', phone: '', address: '', contactPerson: '', unifiedCode: '', contractInfo: '' });
+    setFormData({ name: '', phone: '', address: '', contactPerson: '', unifiedCode: '', contractFile: null });
     setEditingSupplier(null);
   };
 
   const handleFormChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // ─── 合同文件上传处理 ───
+
+  const handleFileSelect = (file: File | null) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target?.result as string;
+      // data:application/pdf;base64,...  → 去掉 data:... 前缀
+      const base64 = data.split(',')[1];
+      setFormData((prev) => ({
+        ...prev,
+        contractFile: {
+          name: file.name,
+          data: base64,
+          type: file.type,
+        },
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileRemove = () => {
+    setFormData((prev) => ({ ...prev, contractFile: null }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (editFileInputRef.current) editFileInputRef.current.value = '';
+  };
+
+  /** 获取文件对应的图标组件 */
+  const getFileIcon = (file: ContractFile) => {
+    if (isImageType(file.type)) return <ImageIcon className="text-green-500" />;
+    if (isPdfType(file.type)) return <PictureAsPdf className="text-red-500" />;
+    return <Description className="text-blue-500" />;
   };
 
   const openAddDialog = () => {
@@ -206,6 +265,7 @@ export default function SupplierManagement() {
                   <TableCell sx={{ fontWeight: 600 }}>联系人</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>联系电话</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>统一社会信用代码</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>合同附件</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>关联学校数</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>OPS设备总数</TableCell>
                   <TableCell sx={{ fontWeight: 600 }}>操作</TableCell>
@@ -214,7 +274,7 @@ export default function SupplierManagement() {
               <TableBody>
                 {pagedSuppliers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                    <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
                       <Box className="text-center text-gray-400">
                         <Business sx={{ fontSize: 48 }} className="mb-2" />
                         <Typography variant="body2">
@@ -237,6 +297,22 @@ export default function SupplierManagement() {
                         <Typography variant="body2" className="font-mono text-xs">
                           {supplier.unifiedCode}
                         </Typography>
+                      </TableCell>
+                      <TableCell>
+                        {supplier.contractFile ? (
+                          <Box className="flex items-center gap-1">
+                            {getFileIcon(supplier.contractFile)}
+                            <span
+                              className="text-blue-600 underline underline-offset-2 cursor-pointer hover:text-blue-800 text-sm truncate max-w-[120px] inline-block"
+                              title={supplier.contractFile.name}
+                              onClick={() => setPreviewSupplier(supplier)}
+                            >
+                              {supplier.contractFile.name}
+                            </span>
+                          </Box>
+                        ) : (
+                          <Typography variant="body2" color="text.disabled">—</Typography>
+                        )}
                       </TableCell>
                       <TableCell>
                         <span
@@ -351,7 +427,7 @@ export default function SupplierManagement() {
                       </Box>
                     </td>
                   </tr>
-                  {/* 第3行：统一社会信用代码、合同信息 */}
+                  {/* 第3行：统一社会信用代码、合同附件 */}
                   <tr>
                     <td>
                       <Box>
@@ -366,13 +442,46 @@ export default function SupplierManagement() {
                     </td>
                     <td>
                       <Box>
-                        <Typography variant="body2" className="mb-2">合同信息:</Typography>
-                        <TextField
-                          fullWidth size="small"
-                          value={formData.contractInfo}
-                          onChange={(e) => handleFormChange('contractInfo', e.target.value)}
-                          placeholder="请输入合同信息"
-                        />
+                        <Typography variant="body2" className="mb-2">合同附件:</Typography>
+                        <Box className="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+                          {formData.contractFile ? (
+                            <Box className="flex items-center justify-between gap-2">
+                              <Box className="flex items-center gap-2 flex-1 min-w-0">
+                                {getFileIcon(formData.contractFile)}
+                                <Typography variant="body2" className="truncate" title={formData.contractFile.name}>
+                                  {formData.contractFile.name}
+                                </Typography>
+                              </Box>
+                              <IconButton size="small" color="error" onClick={handleFileRemove} title="移除文件">
+                                <Delete fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <Box className="flex items-center justify-center">
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Upload />}
+                                component="label"
+                              >
+                                选择文件
+                                <input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  hidden
+                                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx"
+                                  onChange={(e) => {
+                                    handleFileSelect(e.target.files?.[0] ?? null);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </Button>
+                              <Typography variant="caption" color="text.disabled" className="ml-2">
+                                支持 PDF、图片、Word 文档
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
                       </Box>
                     </td>
                   </tr>
@@ -461,7 +570,7 @@ export default function SupplierManagement() {
                       </Box>
                     </td>
                   </tr>
-                  {/* 第3行：统一社会信用代码、合同信息 */}
+                  {/* 第3行：统一社会信用代码、合同附件 */}
                   <tr>
                     <td>
                       <Box>
@@ -476,13 +585,46 @@ export default function SupplierManagement() {
                     </td>
                     <td>
                       <Box>
-                        <Typography variant="body2" className="mb-2">合同信息:</Typography>
-                        <TextField
-                          fullWidth size="small"
-                          value={formData.contractInfo}
-                          onChange={(e) => handleFormChange('contractInfo', e.target.value)}
-                          placeholder="请输入合同信息"
-                        />
+                        <Typography variant="body2" className="mb-2">合同附件:</Typography>
+                        <Box className="border border-dashed border-gray-300 rounded-lg p-3 bg-gray-50">
+                          {formData.contractFile ? (
+                            <Box className="flex items-center justify-between gap-2">
+                              <Box className="flex items-center gap-2 flex-1 min-w-0">
+                                {getFileIcon(formData.contractFile)}
+                                <Typography variant="body2" className="truncate" title={formData.contractFile.name}>
+                                  {formData.contractFile.name}
+                                </Typography>
+                              </Box>
+                              <IconButton size="small" color="error" onClick={handleFileRemove} title="移除文件">
+                                <Delete fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          ) : (
+                            <Box className="flex items-center justify-center">
+                              <Button
+                                variant="outlined"
+                                size="small"
+                                startIcon={<Upload />}
+                                component="label"
+                              >
+                                选择文件
+                                <input
+                                  ref={editFileInputRef}
+                                  type="file"
+                                  hidden
+                                  accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.doc,.docx"
+                                  onChange={(e) => {
+                                    handleFileSelect(e.target.files?.[0] ?? null);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </Button>
+                              <Typography variant="caption" color="text.disabled" className="ml-2">
+                                支持 PDF、图片、Word 文档
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
                       </Box>
                     </td>
                   </tr>
@@ -592,6 +734,99 @@ export default function SupplierManagement() {
           <DialogActions className="px-6 pb-4 border-t">
             <Button onClick={() => setDeleteDialogOpen(false)} variant="outlined">取消</Button>
             <Button onClick={handleDelete} variant="contained" color="error">确定</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* ====== 合同附件预览对话框 ====== */}
+        <Dialog
+          open={Boolean(previewSupplier?.contractFile)}
+          onClose={() => setPreviewSupplier(null)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb', pb: 2 }}>
+            <Box className="flex items-center justify-between">
+              <Box className="flex items-center gap-2">
+                {previewSupplier?.contractFile && getFileIcon(previewSupplier.contractFile)}
+                <Typography variant="h6" className="truncate max-w-md">
+                  {previewSupplier?.contractFile?.name || '合同附件'}
+                </Typography>
+              </Box>
+              <IconButton onClick={() => setPreviewSupplier(null)} size="small"><Close /></IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent sx={{ pt: '16px !important', minHeight: 400 }}>
+            {previewSupplier?.contractFile && (() => {
+              const file = previewSupplier.contractFile;
+              const dataUrl = `data:${file.type};base64,${file.data}`;
+
+              if (isImageType(file.type)) {
+                return (
+                  <Box className="flex items-center justify-center py-4">
+                    <img
+                      src={dataUrl}
+                      alt={file.name}
+                      className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-sm"
+                    />
+                  </Box>
+                );
+              }
+
+              if (isPdfType(file.type) && file.data) {
+                return (
+                  <Box className="w-full py-2" sx={{ height: '70vh' }}>
+                    <iframe
+                      src={dataUrl}
+                      title={file.name}
+                      width="100%"
+                      height="100%"
+                      className="rounded-lg border border-gray-200"
+                    />
+                  </Box>
+                );
+              }
+
+              // 其他文件类型：显示文件信息
+              return (
+                <Box className="py-10 text-center">
+                  <Description sx={{ fontSize: 72 }} className="text-gray-300 mb-4" />
+                  <Typography variant="h6" className="text-gray-700 mb-2">
+                    {file.name}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" className="mb-1">
+                    文件类型：{file.type}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" className="mb-6">
+                    此类型暂不支持在线预览，请下载查看
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    startIcon={<Download />}
+                    href={dataUrl}
+                    download={file.name}
+                  >
+                    下载文件
+                  </Button>
+                </Box>
+              );
+            })()}
+          </DialogContent>
+          <DialogActions className="px-6 pb-4 border-t">
+            {previewSupplier?.contractFile && (() => {
+              const file = previewSupplier.contractFile;
+              const dataUrl = `data:${file.type};base64,${file.data}`;
+              return (
+                <Button
+                  variant="contained"
+                  startIcon={<Download />}
+                  href={dataUrl}
+                  download={file.name}
+                >
+                  下载
+                </Button>
+              );
+            })()}
+            <Button onClick={() => setPreviewSupplier(null)} variant="outlined">关闭</Button>
           </DialogActions>
         </Dialog>
       </Container>

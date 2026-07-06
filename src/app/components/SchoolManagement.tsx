@@ -412,8 +412,8 @@ export default function SchoolManagement() {
                         <Typography variant="body1">{supp?.address || '—'}</Typography>
                       </Grid>
                       <Grid item xs={12}>
-                        <Typography variant="body2" color="text.secondary" className="mb-1">合同信息</Typography>
-                        <Typography variant="body1">{supp?.contractInfo || '—'}</Typography>
+                        <Typography variant="body2" color="text.secondary" className="mb-1">合同附件</Typography>
+                        <Typography variant="body1">{supp?.contractFile?.name || '—'}</Typography>
                       </Grid>
                     </Grid>
                   );
@@ -635,7 +635,7 @@ export default function SchoolManagement() {
                               if (existing) {
                                 setNewSchool({ ...newSchool, supplierId: existing.id });
                               } else {
-                                const created = addSupplier({ name: value, phone: '', address: '', contactPerson: value, unifiedCode: '', contractInfo: '' });
+                                const created = addSupplier({ name: value, phone: '', address: '', contactPerson: value, unifiedCode: '', contractFile: null });
                                 setNewSchool({ ...newSchool, supplierId: created.id });
                               }
                             }
