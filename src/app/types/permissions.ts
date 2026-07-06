@@ -216,6 +216,15 @@ export const ALL_PAGES: PageConfig[] = [
       { key: 'download', label: '下载结果' },
     ],
   },
+  {
+    key: 'supplier',
+    label: '供应商管理',
+    buttons: [
+      { key: 'add', label: '添加供应商' },
+      { key: 'edit', label: '编辑' },
+      { key: 'delete', label: '删除' },
+    ],
+  },
 ];
 
 // 帮助函数：判断角色是否有某个按钮权限
