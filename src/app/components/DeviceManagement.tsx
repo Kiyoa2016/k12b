@@ -1484,28 +1484,72 @@ function FileDistributeDialog({
   devices: DeviceMgmtDevice[];
   onClose: () => void;
 }) {
-  const [files, setFiles] = useState<FileItem[]>([]);
+  const [files, setFiles] = useState<(FileItem & { uploadProgress: number })[]>([]);
   const [targetPath, setTargetPath] = useState('C:\\Users\\Public\\Documents\\教学资源\\');
   const [overwrite, setOverwrite] = useState(false);
-  const [transferring, setTransferring] = useState(false);
-  const [progress, setProgress] = useState<Record<string, number>>({});
+  const [sending, setSending] = useState(false);
+
+  const intervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
+
+  // 清理上传定时器
+  useEffect(() => {
+    if (!open) {
+      intervalsRef.current.forEach(interval => clearInterval(interval));
+      intervalsRef.current.clear();
+      setFiles([]);
+      setSending(false);
+    }
+  }, [open]);
+
+  // 开始自动上传文件
+  const startUpload = (newFiles: FileItem[]) => {
+    const entries = newFiles.map(f => ({ ...f, uploadProgress: 0 }));
+    setFiles(prev => {
+      const merged = [...prev, ...entries];
+      // 为新文件启动上传进度模拟
+      entries.forEach(file => {
+        const interval = setInterval(() => {
+          setFiles(prevFiles =>
+            prevFiles.map(pf =>
+              pf.name === file.name && pf.uploadProgress < 100
+                ? { ...pf, uploadProgress: Math.min(100, pf.uploadProgress + Math.floor(Math.random() * 8) + 2) }
+                : pf
+            )
+          );
+          // 检查是否完成
+          setFiles(prevFiles => {
+            const f = prevFiles.find(pf => pf.name === file.name);
+            if (f && f.uploadProgress >= 100) {
+              clearInterval(interval);
+              intervalsRef.current.delete(file.name);
+            }
+            return prevFiles;
+          });
+        }, 200 + Math.floor(Math.random() * 200));
+        intervalsRef.current.set(file.name, interval);
+      });
+      return merged;
+    });
+  };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      Array.from(e.target.files).forEach(f => {
-        setFiles(prev => [...prev, { name: f.name, size: f.size }]);
-      });
+      const newFiles: FileItem[] = Array.from(e.target.files).map(f => ({ name: f.name, size: f.size }));
+      startUpload(newFiles);
     }
   };
 
-  const removeFile = (name: string) => setFiles(prev => prev.filter(f => f.name !== name));
+  const removeFile = (name: string) => {
+    const interval = intervalsRef.current.get(name);
+    if (interval) { clearInterval(interval); intervalsRef.current.delete(name); }
+    setFiles(prev => prev.filter(f => f.name !== name));
+  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files) {
-      Array.from(e.dataTransfer.files).forEach(f => {
-        setFiles(prev => [...prev, { name: f.name, size: f.size }]);
-      });
+      const newFiles: FileItem[] = Array.from(e.dataTransfer.files).map(f => ({ name: f.name, size: f.size }));
+      startUpload(newFiles);
     }
   };
 
@@ -1514,24 +1558,24 @@ function FileDistributeDialog({
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
-  const startTransfer = () => {
-    if (files.length === 0) return;
-    setTransferring(true);
-    devices.forEach(d => {
-      const interval = setInterval(() => {
-        setProgress(prev => {
-          const current = prev[d.id] || 0;
-          if (current >= 100) { clearInterval(interval); return { ...prev, [d.id]: 100 }; }
-          return { ...prev, [d.id]: Math.min(100, current + Math.floor(Math.random() * 16) + 5) };
-        });
-      }, 400);
-    });
+  const allUploaded = files.length > 0 && files.every(f => f.uploadProgress >= 100);
+
+  const handleSendCommand = () => {
+    setSending(true);
+    // 模拟指令下发，短暂延迟后关闭
+    setTimeout(() => {
+      onClose();
+    }, 800);
   };
 
-  const allComplete = devices.length > 0 && devices.every(d => (progress[d.id] || 0) >= 100);
-
   return (
-    <Dialog open={open} onClose={transferring ? undefined : onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={sending ? undefined : onClose} maxWidth="sm" fullWidth>
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
       <DialogTitle>
         <Box className="flex items-center gap-2">
           <FileUpload className="text-blue-600" />
@@ -1539,67 +1583,99 @@ function FileDistributeDialog({
         </Box>
       </DialogTitle>
       <DialogContent>
+        {sending ? (
+          /* 指令下发成功提示 */
+          <Box className="py-8 text-center">
+            <Box sx={{ fontSize: 48, mb: 2 }}>✅</Box>
+            <Typography variant="h6" className="font-bold text-green-600 mb-1">指令已下发</Typography>
+            <Typography variant="body2" color="text.secondary">
+              文件分发指令已成功发送至 {devices.length} 台设备
+            </Typography>
+          </Box>
+        ) : (
+        <>
         <Typography variant="body2" color="text.secondary" className="mb-3">
           目标设备：{devices.map(d => d.name).join(' / ')}（共 {devices.length} 台）
         </Typography>
+
         <Box
           onDragOver={e => e.preventDefault()}
           onDrop={handleDrop}
-          className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center mb-3 cursor-pointer hover:border-blue-400"
+          className="border-2 border-dashed rounded-xl p-4 text-center mb-3 cursor-pointer hover:border-blue-400"
           onClick={() => document.getElementById('file-dist-input')?.click()}
         >
           <CloudUpload className="text-gray-400" style={{ fontSize: 32 }} />
           <Typography variant="body2" color="text.secondary">点击选择文件或拖拽到此处</Typography>
           <input id="file-dist-input" type="file" multiple hidden onChange={handleFileSelect} />
         </Box>
+
+        {/* 文件列表 + 上传进度条 */}
         {files.length > 0 && (
-          <Box className="mb-3 space-y-1">
-            {files.map(f => (
-              <Box key={f.name} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <Typography variant="body2">{f.name}</Typography>
-                <Box className="flex items-center gap-2">
-                  <Typography variant="caption" color="text.secondary">{formatSize(f.size)}</Typography>
-                  <IconButton size="small" onClick={() => removeFile(f.name)} disabled={transferring}>
-                    <Close fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        )}
-        <TextField size="small" fullWidth label="目标路径" value={targetPath}
-          onChange={e => setTargetPath(e.target.value)} disabled={transferring} className="mb-3" />
-        <Box className="flex gap-4 mb-3">
-          <FormControlLabel control={<Checkbox size="small" checked={overwrite} onChange={(_, v) => setOverwrite(v)} disabled={transferring} />}
-            label={<Typography variant="caption">覆盖已有文件</Typography>} />
-        </Box>
-        {transferring && (
-          <Box className="space-y-2">
-            {devices.map(d => {
-              const pct = progress[d.id] || 0;
+          <Box className="mb-3 space-y-2">
+            {files.map(f => {
+              const isUploaded = f.uploadProgress >= 100;
               return (
-                <Box key={d.id}>
-                  <Box className="flex justify-between">
-                    <Typography variant="caption">{d.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {pct >= 100 ? '✅ 完成' : `${pct}%`}
-                    </Typography>
+                <Box key={f.name}>
+                  <Box className="flex items-center justify-between">
+                    <Box className="flex items-center gap-2 min-w-0 flex-1">
+                      <Box component="span" sx={{ fontSize: 16, flexShrink: 0 }}>📄</Box>
+                      <Typography variant="body2" className="truncate">{f.name}</Typography>
+                    </Box>
+                    <Box className="flex items-center gap-2 shrink-0">
+                      {isUploaded ? (
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#16a34a' }}>✅ 已上传</Typography>
+                      ) : (
+                        <Typography variant="caption" sx={{ fontWeight: 600, color: '#3b82f6' }}>{f.uploadProgress}%</Typography>
+                      )}
+                      <IconButton size="small" onClick={() => removeFile(f.name)}>
+                        <Close fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </Box>
-                  <Box className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <Box className="h-full rounded-full bg-blue-500 transition-all duration-300" style={{ width: `${pct}%` }} />
+                  {/* 上传进度条 */}
+                  <Box className="h-2 bg-gray-100 rounded-full overflow-hidden mt-1 relative">
+                    <Box
+                      className={`h-full rounded-full transition-all duration-300 ${isUploaded ? 'bg-green-500' : 'bg-blue-500'}`}
+                      style={{ width: `${f.uploadProgress}%` }}
+                    />
+                    {!isUploaded && (
+                      <Box
+                        className="absolute inset-0 h-full rounded-full"
+                        sx={{
+                          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                          animation: 'shimmer 1.2s ease-in-out infinite',
+                        }}
+                      />
+                    )}
                   </Box>
                 </Box>
               );
             })}
           </Box>
         )}
+
+        <TextField size="small" fullWidth label="目标路径" value={targetPath}
+          onChange={e => setTargetPath(e.target.value)} sx={{ mb: 3 }} />
+        <Box className="flex mb-3">
+          <FormControlLabel control={<Checkbox size="small" checked={overwrite} onChange={(_, v) => setOverwrite(v)} />}
+            label={<Typography variant="caption">覆盖已有文件</Typography>} />
+        </Box>
+        </>
+        )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose} disabled={transferring}>取消</Button>
-        <Button onClick={startTransfer} variant="contained" disabled={files.length === 0 || transferring}>
-          {transferring ? '传输中...' : '开始传输'}
-        </Button>
-        {allComplete && <Button onClick={onClose} variant="contained" color="success">完成</Button>}
+        {sending ? null : (
+          <>
+            <Button onClick={onClose}>取消</Button>
+            <Button
+              onClick={handleSendCommand}
+              variant="contained"
+              disabled={!allUploaded}
+            >
+              {files.length === 0 ? '请选择文件' : allUploaded ? '开始传输' : `上传中 ${files.filter(f => f.uploadProgress < 100).length} 个...`}
+            </Button>
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );
