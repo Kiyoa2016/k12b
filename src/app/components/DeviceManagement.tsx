@@ -7,16 +7,17 @@ import {
   TableHead, TableRow, TablePagination,
   Select, MenuItem, FormControl, FormControlLabel,
   Checkbox, Switch, Tooltip, Menu, Tabs, Tab,
-  Paper, CircularProgress,
+  Paper, CircularProgress, Divider, RadioGroup, Radio,
 } from '@mui/material';
 import {
   Devices, CheckCircle, Cancel, Warning, PowerOff,
-  Search, RestartAlt, Lock, LockOpen, Screenshot, CleaningServices,
-  Notifications, VolumeUp, VolumeDown, FileUpload, FileDownload,
+  Search, RestartAlt, Lock, LockOpen,
+  Notifications, VolumeUp, FileUpload,
   OpenInNew, Close, Message, Computer, Settings, SystemUpdate,
   GridView, TableView, KeyboardArrowDown, ChevronRight,
   Refresh, ArrowBack, CloudUpload, Send,
 } from '@mui/icons-material';
+import SendMessageDialog, { type MessageTarget, type SendMessagePayload } from './SendMessageDialog';
 
 // ─── 类型定义 ───
 
@@ -73,24 +74,26 @@ interface CommandResult {
   message?: string;
 }
 
+interface CountdownParams {
+  enabled: boolean;
+  eventName: string;
+  targetDate: string;
+}
+
 // ─── 远程指令定义 ───
 
 const COMMANDS: Record<string, RemoteCommand> = {
-  powerOn: { id: 'powerOn', label: '开机', category: 'system', icon: 'PowerSettingsNew', supportBatch: true, requireConfirm: false },
   powerOff: { id: 'powerOff', label: '关机', category: 'system', icon: 'PowerOff', supportBatch: true, requireConfirm: true },
   reboot: { id: 'reboot', label: '重启', category: 'system', icon: 'RestartAlt', supportBatch: true, requireConfirm: true },
   lockScreen: { id: 'lockScreen', label: '锁屏', category: 'screen', icon: 'Lock', supportBatch: true, requireConfirm: false },
   unlockScreen: { id: 'unlockScreen', label: '解锁', category: 'screen', icon: 'LockOpen', supportBatch: false, requireConfirm: false },
-  screenshot: { id: 'screenshot', label: '截屏', category: 'screen', icon: 'Screenshot', supportBatch: true, requireConfirm: false },
-  cleanLock: { id: 'cleanLock', label: '清洁屏锁', category: 'screen', icon: 'CleaningServices', supportBatch: true, requireConfirm: false },
   ringBell: { id: 'ringBell', label: '打铃', category: 'audio', icon: 'Notifications', supportBatch: true, requireConfirm: false },
-  volUp: { id: 'volUp', label: '音量增大', category: 'audio', icon: 'VolumeUp', supportBatch: true, requireConfirm: false },
-  volDown: { id: 'volDown', label: '音量减小', category: 'audio', icon: 'VolumeDown', supportBatch: true, requireConfirm: false },
-  fileDist: { id: 'fileDist', label: '文件分发', category: 'file', icon: 'FileUpload', supportBatch: true, requireConfirm: true },
-  fileCollect: { id: 'fileCollect', label: '文件收集', category: 'file', icon: 'FileDownload', supportBatch: true, requireConfirm: true },
+  volControl: { id: 'volControl', label: '音量控制', category: 'audio', icon: 'VolumeUp', supportBatch: true, requireConfirm: false },
+  fileDist: { id: 'fileDist', label: '文件传输', category: 'file', icon: 'FileUpload', supportBatch: true, requireConfirm: true },
   openApp: { id: 'openApp', label: '打开应用', category: 'app', icon: 'OpenInNew', supportBatch: true, requireConfirm: false },
   closeApp: { id: 'closeApp', label: '关闭应用', category: 'app', icon: 'Close', supportBatch: true, requireConfirm: true },
   sendMsg: { id: 'sendMsg', label: '发送消息', category: 'message', icon: 'Message', supportBatch: true, requireConfirm: false },
+  countdown: { id: 'countdown', label: '倒计日', category: 'message', icon: 'CalendarMonth', supportBatch: true, requireConfirm: false },
   remoteDesktop: { id: 'remoteDesktop', label: '远程桌面', category: 'tool', icon: 'Computer', supportBatch: false, requireConfirm: false },
   remoteSettings: { id: 'remoteSettings', label: '远程设置', category: 'tool', icon: 'Settings', supportBatch: true, requireConfirm: false },
   sysUpdate: { id: 'sysUpdate', label: '系统更新', category: 'tool', icon: 'SystemUpdate', supportBatch: true, requireConfirm: true },
@@ -101,9 +104,7 @@ const COMMAND_CATEGORIES: { key: RemoteCommandCategory; label: string; icon: str
   { key: 'screen', label: '屏幕控制', icon: 'Lock' },
   { key: 'audio', label: '音频控制', icon: 'Notifications' },
   { key: 'file', label: '文件操作', icon: 'FileUpload' },
-  { key: 'app', label: '应用管理', icon: 'OpenInNew' },
   { key: 'message', label: '消息通知', icon: 'Message' },
-  { key: 'tool', label: '系统工具', icon: 'Settings' },
 ];
 
 // ─── Mock 数据 ───
@@ -525,12 +526,6 @@ function DeviceCard({
         />
         {hover && device.status === 'online' && (
           <Box className="absolute inset-0 bg-black/30 flex items-center justify-center gap-2 rounded-lg">
-            <Tooltip title="截屏">
-              <IconButton size="small" sx={{ color: 'white', bgcolor: 'rgba(0,0,0,0.4)' }}
-                onClick={e => { e.stopPropagation(); onAction(device, e.currentTarget); }}>
-                <Screenshot />
-              </IconButton>
-            </Tooltip>
             <Tooltip title="锁屏">
               <IconButton size="small" sx={{ color: 'white', bgcolor: 'rgba(0,0,0,0.4)' }}
                 onClick={e => { e.stopPropagation(); }}>
@@ -755,7 +750,6 @@ function BatchActionBar({
     { id: 'reboot', label: '重启' },
     { id: 'lockScreen', label: '锁屏' },
     { id: 'ringBell', label: '打铃' },
-    { id: 'screenshot', label: '截屏' },
     { id: 'sendMsg', label: '消息' },
   ];
 
@@ -849,14 +843,66 @@ function CommandResultDialog({
   );
 }
 
+// ─── 视频流类型 ───
+type StreamType = 'teacher' | 'student' | 'blackboard';
+
+interface StreamOption {
+  key: StreamType;
+  label: string;
+  icon: string;
+}
+
+const STREAM_OPTIONS: StreamOption[] = [
+  { key: 'teacher', label: '老师', icon: '👨‍🏫' },
+  { key: 'student', label: '学生', icon: '👩‍🎓' },
+  { key: 'blackboard', label: '板书', icon: '📝' },
+];
+
+function StreamPreview({ streamType, device }: { streamType: StreamType; device: DeviceMgmtDevice }) {
+  const previews: Record<StreamType, { gradient: string; icons: string[]; label: string }> = {
+    teacher: {
+      gradient: 'bg-gradient-to-br from-blue-500 to-indigo-700',
+      icons: ['👨‍🏫', '📖', '🎯', '💡'],
+      label: '老师画面',
+    },
+    student: {
+      gradient: 'bg-gradient-to-br from-green-400 to-emerald-600',
+      icons: ['👩‍🎓', '📝', '✋', '📚'],
+      label: '学生画面',
+    },
+    blackboard: {
+      gradient: 'bg-gradient-to-br from-slate-600 to-slate-900',
+      icons: ['📝', '📐', '📏', '🔢'],
+      label: '板书画面',
+    },
+  };
+
+  const p = previews[streamType];
+
+  return (
+    <Box className={`rounded-xl overflow-hidden ${p.gradient} h-80 flex flex-col items-center justify-center relative`}>
+      <Box className="grid grid-cols-2 gap-6 p-8 opacity-60">
+        {p.icons.map((icon, i) => (
+          <Box key={i} className="flex items-center justify-center" style={{ fontSize: 48 }}>{icon}</Box>
+        ))}
+      </Box>
+      <Typography variant="caption" className="absolute bottom-3 text-white/60">
+        {p.label} · {device.name}
+      </Typography>
+    </Box>
+  );
+}
+
 // ─── 远程桌面对话框 ───
 function RemoteDesktopDialog({
-  device, open, onClose,
+  device, open, onClose, onOpenSendMessage,
 }: {
   device: DeviceMgmtDevice | null;
   open: boolean;
   onClose: () => void;
+  onOpenSendMessage?: (device: DeviceMgmtDevice) => void;
 }) {
+  const [streamType, setStreamType] = useState<StreamType>('teacher');
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [logs, setLogs] = useState<string[]>([]);
@@ -896,13 +942,36 @@ function RemoteDesktopDialog({
       <DialogContent sx={{ pt: '16px !important' }}>
         <Box className="flex gap-4">
           <Box className="flex-1">
-            <Box className={`rounded-xl overflow-hidden ${device.screenThumbnail} h-96 flex items-center justify-center`}>
-              <Box className="grid grid-cols-4 gap-4 p-8 opacity-60">
-                {['📁', '📄', '⚙️', '🖥️', '📊', '🌐', '🎬', '📝'].map((icon, i) => (
-                  <Box key={i} className="flex items-center justify-center" style={{ fontSize: 32 }}>{icon}</Box>
-                ))}
-              </Box>
+            {/* 视频流切换 */}
+            <Box className="flex items-center gap-1 mb-3 p-1 bg-gray-100 rounded-lg w-fit">
+              {STREAM_OPTIONS.map(opt => (
+                <Button
+                  key={opt.key}
+                  size="small"
+                  variant={streamType === opt.key ? 'contained' : 'text'}
+                  onClick={() => {
+                    setStreamType(opt.key);
+                    addLog(`${new Date().toLocaleTimeString()} 切换到${opt.label}画面`);
+                  }}
+                  sx={{
+                    fontSize: 12,
+                    px: 2,
+                    minWidth: 'auto',
+                    borderRadius: '6px',
+                    ...(streamType === opt.key
+                      ? {}
+                      : { color: 'text.secondary' }),
+                  }}
+                  startIcon={<Typography variant="body2" sx={{ lineHeight: 1 }}>{opt.icon}</Typography>}
+                >
+                  {opt.label}
+                </Button>
+              ))}
             </Box>
+
+            {/* 视频流画面 */}
+            <StreamPreview streamType={streamType} device={device} />
+
             <Box className="flex items-center justify-between mt-2">
               <Typography variant="caption" color="text.secondary">
                 最后刷新: {lastRefresh.toLocaleString('zh-CN', { hour12: false })}
@@ -930,14 +999,19 @@ function RemoteDesktopDialog({
               <Box className="grid grid-cols-2 gap-2">
                 {[
                   { cmd: 'lockScreen', label: '锁屏', icon: Lock },
-                  { cmd: 'screenshot', label: '截屏', icon: Screenshot },
                   { cmd: 'powerOff', label: '关机', icon: PowerOff },
                   { cmd: 'reboot', label: '重启', icon: RestartAlt },
                   { cmd: 'ringBell', label: '打铃', icon: Notifications },
                   { cmd: 'sendMsg', label: '消息', icon: Message },
                 ].map(({ cmd, label, icon: Icon }) => (
                   <Button key={cmd} size="small" variant="outlined"
-                    onClick={() => handleCommand(cmd)}
+                    onClick={() => {
+                      if (cmd === 'sendMsg' && onOpenSendMessage && device) {
+                        onOpenSendMessage(device);
+                      } else {
+                        handleCommand(cmd);
+                      }
+                    }}
                     startIcon={<Icon />}
                     sx={{ fontSize: 10, justifyContent: 'flex-start' }}
                   >
@@ -957,6 +1031,437 @@ function RemoteDesktopDialog({
           </Box>
         )}
       </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── 关机参数弹窗 ───
+interface PowerOffParams {
+  forceShutdown: boolean;
+  scheduleType: 'once' | 'weekly';
+  weeklyDays: number[];   // 1=周一 ... 7=周日
+  shutdownTime: string;   // HH:mm 格式
+}
+
+const WEEKDAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+function PowerOffDialog({
+  open, deviceCount, onClose, onConfirm,
+}: {
+  open: boolean;
+  deviceCount: number;
+  onClose: () => void;
+  onConfirm: (params: PowerOffParams) => void;
+}) {
+  const [forceShutdown, setForceShutdown] = useState(false);
+  const [scheduleType, setScheduleType] = useState<'once' | 'weekly'>('once');
+  const [weeklyDays, setWeeklyDays] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [shutdownTime, setShutdownTime] = useState('22:00');
+
+  const toggleDay = (day: number) => {
+    setWeeklyDays(prev =>
+      prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day].sort()
+    );
+  };
+
+  const handleConfirm = () => {
+    onConfirm({ forceShutdown, scheduleType, weeklyDays, shutdownTime });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb' }}>
+        <Box className="flex items-center gap-2">
+          <PowerOff sx={{ color: '#ef4444' }} />
+          <Typography variant="h6">关机参数设置</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '20px !important' }}>
+        <Typography variant="body2" color="text.secondary" className="mb-4">
+          目标设备：<strong>{deviceCount}</strong> 台
+        </Typography>
+
+        {/* 强制关机 */}
+        <Box className="mb-5">
+          <Box className="flex items-center justify-between">
+            <Box>
+              <Typography variant="body2" className="font-medium">强制关机</Typography>
+              <Typography variant="caption" color="text.secondary">强制关闭正在运行的应用，不保存未完成的工作</Typography>
+            </Box>
+            <Switch checked={forceShutdown} onChange={(_, v) => setForceShutdown(v)} />
+          </Box>
+        </Box>
+
+        <Divider sx={{ mb: 3 }} />
+
+        {/* 执行方式 */}
+        <Typography variant="body2" className="font-medium mb-3">执行方式</Typography>
+        <RadioGroup value={scheduleType} onChange={(e) => setScheduleType(e.target.value as 'once' | 'weekly')}>
+          <Box className="mb-3">
+            <FormControlLabel value="once" control={<Radio />} label={
+              <Box>
+                <Typography variant="body2" className="font-medium">单次执行</Typography>
+                <Typography variant="caption" color="text.secondary">立即向目标设备发送关机指令</Typography>
+              </Box>
+            } />
+          </Box>
+          <Box>
+            <FormControlLabel value="weekly" control={<Radio />} label={
+              <Box>
+                <Typography variant="body2" className="font-medium">每周定时执行</Typography>
+                <Typography variant="caption" color="text.secondary">按设定的星期和时间循环执行关机指令</Typography>
+              </Box>
+            } />
+            {scheduleType === 'weekly' && (
+              <Box className="ml-8 mt-3 space-y-3">
+                {/* 星期选择 */}
+                <Box>
+                  <Typography variant="caption" className="font-medium mb-1.5 block" color="text.secondary">选择星期</Typography>
+                  <Box className="flex gap-1.5">
+                    {WEEKDAY_LABELS.map((label, idx) => {
+                      const day = idx + 1;
+                      const selected = weeklyDays.includes(day);
+                      return (
+                        <Chip
+                          key={day}
+                          label={label}
+                          size="small"
+                          variant={selected ? 'filled' : 'outlined'}
+                          color={selected ? 'primary' : 'default'}
+                          onClick={() => toggleDay(day)}
+                          sx={{ flex: 1, cursor: 'pointer', fontWeight: 600 }}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+                {/* 时间选择 */}
+                <Box className="flex items-center gap-2">
+                  <Typography variant="caption" color="text.secondary">关机时间</Typography>
+                  <TextField
+                    size="small"
+                    type="time"
+                    value={shutdownTime}
+                    onChange={(e) => setShutdownTime(e.target.value)}
+                    sx={{ width: 140 }}
+                    slotProps={{ htmlInput: { style: { fontSize: 14, textAlign: 'center' } } }}
+                  />
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </RadioGroup>
+      </DialogContent>
+      <DialogActions sx={{ borderTop: '1px solid #e5e7eb', px: 3, py: 1.5 }}>
+        <Button onClick={onClose} variant="outlined" color="inherit">取消</Button>
+        <Button onClick={handleConfirm} variant="contained" color="error" startIcon={<PowerOff />}>
+          确认关机
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ─── 重启参数弹窗 ───
+interface RebootParams {
+  forceReboot: boolean;
+}
+
+function RebootDialog({
+  open, deviceCount, onClose, onConfirm,
+}: {
+  open: boolean;
+  deviceCount: number;
+  onClose: () => void;
+  onConfirm: (params: RebootParams) => void;
+}) {
+  const [forceReboot, setForceReboot] = useState(false);
+
+  const handleConfirm = () => {
+    onConfirm({ forceReboot });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb' }}>
+        <Box className="flex items-center gap-2">
+          <RestartAlt sx={{ color: '#f59e0b' }} />
+          <Typography variant="h6">重启参数设置</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '20px !important' }}>
+        <Typography variant="body2" color="text.secondary" className="mb-4">
+          目标设备：<strong>{deviceCount}</strong> 台
+        </Typography>
+
+        {/* 强制重启 */}
+        <Box className="mb-2">
+          <Box className="flex items-center justify-between">
+            <Box>
+              <Typography variant="body2" className="font-medium">强制重启</Typography>
+              <Typography variant="caption" color="text.secondary">强制关闭正在运行的应用后重启系统，不保存未完成的工作</Typography>
+            </Box>
+            <Switch checked={forceReboot} onChange={(_, v) => setForceReboot(v)} />
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ borderTop: '1px solid #e5e7eb', px: 3, py: 1.5 }}>
+        <Button onClick={onClose} variant="outlined" color="inherit">取消</Button>
+        <Button onClick={handleConfirm} variant="contained" startIcon={<RestartAlt />}
+          sx={{ backgroundColor: '#f59e0b', '&:hover': { backgroundColor: '#d97706' } }}>
+          确认重启
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ─── 打铃参数弹窗 ───
+const RINGTONE_OPTIONS = [
+  { id: 'bell-classic', label: '经典铃声', desc: '传统上下课铃声' },
+  { id: 'bell-gentle', label: '轻柔提示音', desc: '柔和舒缓的提示音' },
+  { id: 'bell-urgent', label: '紧急集合音', desc: '短促有力的紧急铃声' },
+  { id: 'bell-alarm', label: '警报音', desc: '持续警报声' },
+  { id: 'bell-custom', label: '自定义铃声', desc: '上传或选择自定义音频文件' },
+];
+
+interface RingBellParams {
+  ringtoneId: string;
+  durationSeconds: number;
+}
+
+function RingBellDialog({
+  open, deviceCount, onClose, onConfirm,
+}: {
+  open: boolean;
+  deviceCount: number;
+  onClose: () => void;
+  onConfirm: (params: RingBellParams) => void;
+}) {
+  const [ringtoneId, setRingtoneId] = useState('bell-classic');
+  const [durationSeconds, setDurationSeconds] = useState(10);
+  const [customFile, setCustomFile] = useState<{ name: string; size: number } | null>(null);
+
+  const handleConfirm = () => {
+    onConfirm({ ringtoneId, durationSeconds });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb' }}>
+        <Box className="flex items-center gap-2">
+          <Notifications sx={{ color: '#3b82f6' }} />
+          <Typography variant="h6">打铃参数设置</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '20px !important' }}>
+        <Typography variant="body2" color="text.secondary" className="mb-4">
+          目标设备：<strong>{deviceCount}</strong> 台
+        </Typography>
+
+        {/* 铃音选择 */}
+        <Typography variant="body2" className="font-medium mb-2">选择铃音</Typography>
+        <FormControl fullWidth size="small" className="mb-5">
+          <Select
+            value={ringtoneId}
+            onChange={(e) => setRingtoneId(e.target.value)}
+            renderValue={(val) => {
+              const opt = RINGTONE_OPTIONS.find(r => r.id === val);
+              return opt ? `${opt.label} — ${opt.desc}` : '';
+            }}
+          >
+            {RINGTONE_OPTIONS.map(opt => (
+              <MenuItem key={opt.id} value={opt.id}>
+                <Box>
+                  <Typography variant="body2" className="font-medium">{opt.label}</Typography>
+                  <Typography variant="caption" color="text.secondary">{opt.desc}</Typography>
+                </Box>
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        {ringtoneId === 'bell-custom' && (
+          <Box className="mb-5">
+            <Box
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => {
+                e.preventDefault();
+                const file = e.dataTransfer.files?.[0];
+                if (file && file.type.startsWith('audio/')) {
+                  setCustomFile({ name: file.name, size: file.size });
+                }
+              }}
+              onClick={() => document.getElementById('ringtone-upload-input')?.click()}
+              sx={{
+                border: '2px dashed',
+                borderColor: customFile ? '#3b82f6' : '#d1d5db',
+                borderRadius: 2,
+                p: 3,
+                textAlign: 'center',
+                cursor: 'pointer',
+                backgroundColor: customFile ? '#eff6ff' : 'transparent',
+                transition: 'all 0.15s',
+                '&:hover': { borderColor: '#93c5fd', backgroundColor: '#f8fafc' },
+              }}
+            >
+              {customFile ? (
+                <Box>
+                  <Typography variant="body2" className="font-medium text-blue-600">{customFile.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {(customFile.size / 1024 / 1024).toFixed(1)} MB · 点击或拖拽更换文件
+                  </Typography>
+                </Box>
+              ) : (
+                <Box>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: 28, mb: 0.5 }}>🎵</Typography>
+                  <Typography variant="body2" color="text.secondary">点击选择或拖拽音频文件到此处</Typography>
+                  <Typography variant="caption" color="text.secondary">支持 MP3 / WAV / AAC 格式</Typography>
+                </Box>
+              )}
+            </Box>
+            <input id="ringtone-upload-input" type="file" accept="audio/*" hidden
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) setCustomFile({ name: file.name, size: file.size });
+              }}
+            />
+          </Box>
+        )}
+
+        <Divider sx={{ mb: 3 }} />
+
+        {/* 响铃时长 */}
+        <Typography variant="body2" className="font-medium mb-2">响铃时长</Typography>
+        <Box className="flex items-center gap-2">
+          <Button
+            size="small"
+            variant="outlined"
+            sx={{ minWidth: 32, height: 32, p: 0, fontSize: 16, fontWeight: 700 }}
+            onClick={() => setDurationSeconds(Math.max(1, durationSeconds - 5))}
+            disabled={durationSeconds <= 1}
+          >
+            -
+          </Button>
+          <TextField
+            size="small"
+            type="number"
+            value={durationSeconds}
+            onChange={(e) => setDurationSeconds(Math.max(1, Math.min(300, parseInt(e.target.value) || 1)))}
+            sx={{ width: 80 }}
+            slotProps={{ htmlInput: { min: 1, max: 300, style: { textAlign: 'center' } } }}
+          />
+          <Button
+            size="small"
+            variant="outlined"
+            sx={{ minWidth: 32, height: 32, p: 0, fontSize: 16, fontWeight: 700 }}
+            onClick={() => setDurationSeconds(Math.min(300, durationSeconds + 5))}
+            disabled={durationSeconds >= 300}
+          >
+            +
+          </Button>
+          <Typography variant="body2" color="text.secondary">秒</Typography>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ borderTop: '1px solid #e5e7eb', px: 3, py: 1.5 }}>
+        <Button onClick={onClose} variant="outlined" color="inherit">取消</Button>
+        <Button onClick={handleConfirm} variant="contained" startIcon={<Notifications />}>
+          确认打铃
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ─── 音量控制弹窗 ───
+interface VolumeControlParams {
+  mode: 'increase' | 'decrease';
+  volume: number;
+}
+
+function VolumeControlDialog({
+  open, deviceCount, onClose, onConfirm,
+}: {
+  open: boolean;
+  deviceCount: number;
+  onClose: () => void;
+  onConfirm: (params: VolumeControlParams) => void;
+}) {
+  const [mode, setMode] = useState<'increase' | 'decrease'>('increase');
+  const [volume, setVolume] = useState(50);
+
+  const handleConfirm = () => {
+    onConfirm({ mode, volume });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb' }}>
+        <Box className="flex items-center gap-2">
+          <VolumeUp sx={{ color: '#3b82f6' }} />
+          <Typography variant="h6">音量控制设置</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '20px !important' }}>
+        <Typography variant="body2" color="text.secondary" className="mb-4">
+          目标设备：<strong>{deviceCount}</strong> 台
+        </Typography>
+
+        {/* 音量调整模式 */}
+        <Typography variant="body2" className="font-medium mb-2">调整模式</Typography>
+        <RadioGroup row value={mode} onChange={(e) => setMode(e.target.value as 'increase' | 'decrease')} className="mb-5">
+          <FormControlLabel value="increase" control={<Radio />} label={
+            <Box className="flex items-center gap-1">
+              <VolumeUp sx={{ fontSize: 18, color: '#22c55e' }} />
+              <Typography variant="body2">增加</Typography>
+            </Box>
+          } sx={{ mr: 3 }} />
+          <FormControlLabel value="decrease" control={<Radio />} label={
+            <Box className="flex items-center gap-1">
+              <VolumeUp sx={{ fontSize: 18, color: '#ef4444', transform: 'scaleX(-1)' }} />
+              <Typography variant="body2">减小</Typography>
+            </Box>
+          } />
+        </RadioGroup>
+
+        <Divider sx={{ mb: 3 }} />
+
+        {/* 音量大小 */}
+        <Typography variant="body2" className="font-medium mb-2">音量大小：{volume}%</Typography>
+        <Box className="flex items-center gap-3">
+          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 20, textAlign: 'right' }}>0</Typography>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={volume}
+            onChange={(e) => setVolume(Number(e.target.value))}
+            style={{ flex: 1, accentColor: mode === 'increase' ? '#22c55e' : '#ef4444' }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ minWidth: 20 }}>100</Typography>
+        </Box>
+        <Box className="flex items-center justify-center gap-2 mt-1">
+          <TextField
+            size="small"
+            type="number"
+            value={volume}
+            onChange={(e) => setVolume(Math.max(0, Math.min(100, parseInt(e.target.value) || 0)))}
+            sx={{ width: 80 }}
+            slotProps={{ htmlInput: { min: 0, max: 100, style: { textAlign: 'center' } } }}
+          />
+          <Typography variant="body2" color="text.secondary">%</Typography>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ borderTop: '1px solid #e5e7eb', px: 3, py: 1.5 }}>
+        <Button onClick={onClose} variant="outlined" color="inherit">取消</Button>
+        <Button onClick={handleConfirm} variant="contained" startIcon={<VolumeUp />}>
+          确认{ mode === 'increase' ? '增加' : '减小' }
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 }
@@ -981,7 +1486,6 @@ function FileDistributeDialog({
 }) {
   const [files, setFiles] = useState<FileItem[]>([]);
   const [targetPath, setTargetPath] = useState('C:\\Users\\Public\\Documents\\教学资源\\');
-  const [autoOpen, setAutoOpen] = useState(true);
   const [overwrite, setOverwrite] = useState(false);
   const [transferring, setTransferring] = useState(false);
   const [progress, setProgress] = useState<Record<string, number>>({});
@@ -1066,8 +1570,6 @@ function FileDistributeDialog({
         <TextField size="small" fullWidth label="目标路径" value={targetPath}
           onChange={e => setTargetPath(e.target.value)} disabled={transferring} className="mb-3" />
         <Box className="flex gap-4 mb-3">
-          <FormControlLabel control={<Checkbox size="small" checked={autoOpen} onChange={(_, v) => setAutoOpen(v)} disabled={transferring} />}
-            label={<Typography variant="caption">接收后自动打开</Typography>} />
           <FormControlLabel control={<Checkbox size="small" checked={overwrite} onChange={(_, v) => setOverwrite(v)} disabled={transferring} />}
             label={<Typography variant="caption">覆盖已有文件</Typography>} />
         </Box>
@@ -1103,65 +1605,6 @@ function FileDistributeDialog({
   );
 }
 
-// ─── 发送消息弹窗 ───
-function SendMessageDialog({
-  open, devices, onClose,
-}: {
-  open: boolean;
-  devices: DeviceMgmtDevice[];
-  onClose: () => void;
-}) {
-  const [message, setMessage] = useState('');
-  const [sent, setSent] = useState(false);
-
-  const handleSend = () => {
-    if (!message.trim()) return;
-    setSent(true);
-    setTimeout(onClose, 1500);
-  };
-
-  if (sent) {
-    return (
-      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-        <DialogContent className="text-center py-8">
-          <CheckCircle sx={{ fontSize: 48, color: '#22c55e' }} className="mb-2" />
-          <Typography variant="h6">消息已发送</Typography>
-          <Typography variant="body2" color="text.secondary">
-            已向 {devices.length} 台设备发送消息
-          </Typography>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Box className="flex items-center gap-2">
-          <Message className="text-blue-600" />
-          <Typography variant="h6">发送消息</Typography>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" className="mb-3">
-          目标设备：{devices.length > 3
-            ? `${devices.slice(0, 3).map(d => d.name).join('、')} 等 ${devices.length} 台`
-            : devices.map(d => d.name).join('、')}
-        </Typography>
-        <TextField autoFocus multiline rows={4} fullWidth placeholder="请输入要发送的消息内容..."
-          value={message} onChange={e => setMessage(e.target.value)} variant="outlined" size="small" />
-        <Box className="flex items-center gap-2 mt-2">
-          <Checkbox size="small" defaultChecked />
-          <Typography variant="caption" color="text.secondary">以弹窗形式在设备屏幕中央显示</Typography>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>取消</Button>
-        <Button onClick={handleSend} variant="contained" disabled={!message.trim()}>发送</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
 
 // ─── 批量指令选择弹窗 ───
 function BatchCommandDialog({
@@ -1283,7 +1726,15 @@ export default function DeviceManagement() {
   // ── 弹窗状态 ──
   const [desktopDevice, setDesktopDevice] = useState<DeviceMgmtDevice | null>(null);
   const [showFileDist, setShowFileDist] = useState(false);
+  const [messageTarget, setMessageTarget] = useState<DeviceMgmtDevice | null>(null);
   const [showSendMsg, setShowSendMsg] = useState(false);
+  const [showPowerOff, setShowPowerOff] = useState(false);
+  const [powerOffTargets, setPowerOffTargets] = useState<DeviceMgmtDevice[]>([]);
+  const [showReboot, setShowReboot] = useState(false);
+  const [showRingBell, setShowRingBell] = useState(false);
+  const [showVolumeControl, setShowVolumeControl] = useState(false);
+  const [showCountdown, setShowCountdown] = useState(false);
+  const [countdownTargets, setCountdownTargets] = useState<DeviceMgmtDevice[]>([]);
   const [showBatchCmd, setShowBatchCmd] = useState(false);
   const [showCommandResult, setShowCommandResult] = useState(false);
   const [commandResults, setCommandResults] = useState<CommandResult[]>([]);
@@ -1344,8 +1795,41 @@ export default function DeviceManagement() {
     if (targets.length === 0) return;
 
     // Special commands that open their own dialogs
-    if (commandId === 'sendMsg') { setShowSendMsg(true); return; }
+    if (commandId === 'sendMsg') {
+      const target = targets[0];
+      if (target) {
+        setMessageTarget(target);
+        setShowSendMsg(true);
+        setMenuAnchorEl(null);
+      }
+      return;
+    }
     if (commandId === 'fileDist') { setShowFileDist(true); return; }
+    if (commandId === 'powerOff') {
+      setPowerOffTargets(targets);
+      setShowPowerOff(true);
+      return;
+    }
+    if (commandId === 'reboot') {
+      setPowerOffTargets(targets);
+      setShowReboot(true);
+      return;
+    }
+    if (commandId === 'ringBell') {
+      setPowerOffTargets(targets);
+      setShowRingBell(true);
+      return;
+    }
+    if (commandId === 'volControl') {
+      setPowerOffTargets(targets);
+      setShowVolumeControl(true);
+      return;
+    }
+    if (commandId === 'countdown') {
+      setCountdownTargets(targets);
+      setShowCountdown(true);
+      return;
+    }
 
     // Simulate command execution
     const results: CommandResult[] = targets.map(d => ({
@@ -1380,6 +1864,176 @@ export default function DeviceManagement() {
     if (menuDevice) {
       handleCommand(commandId, [menuDevice]);
     }
+  };
+
+  const handleOpenSendMessage = (device: DeviceMgmtDevice) => {
+    setMessageTarget(device);
+    setShowSendMsg(true);
+  };
+
+  const handleSendMessage = (_payload: SendMessagePayload) => {
+    // 消息发送完成后的处理
+    // TODO: 调用实际 API
+  };
+
+  const handlePowerOffConfirm = (params: PowerOffParams) => {
+    const targets = powerOffTargets;
+    if (targets.length === 0) return;
+    const cmd = COMMANDS['powerOff'];
+
+    // 构建参数描述
+    const scheduleDesc = params.scheduleType === 'weekly'
+      ? `每周${params.weeklyDays.map(d => WEEKDAY_LABELS[d - 1]).join('、')} ${params.shutdownTime}`
+      : '单次执行';
+    const paramDesc = [
+      params.forceShutdown ? '强制关机' : '正常关机',
+      scheduleDesc,
+    ].join(' · ');
+
+    const results: CommandResult[] = targets.map(d => ({
+      deviceId: d.id,
+      deviceName: d.name,
+      commandLabel: `${cmd.label} (${paramDesc})`,
+      status: 'pending' as const,
+    }));
+    setCommandResults(results);
+    setShowCommandResult(true);
+
+    targets.forEach((d, i) => {
+      const delay = Math.floor(Math.random() * 2500) + 500;
+      setTimeout(() => {
+        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
+        setCommandResults(prev => prev.map((r, j) =>
+          j === i ? {
+            ...r,
+            status: success ? 'success' as const : 'fail' as const,
+            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
+          } : r
+        ));
+      }, delay);
+    });
+  };
+
+  const handleRebootConfirm = (params: RebootParams) => {
+    const targets = powerOffTargets;
+    if (targets.length === 0) return;
+    const cmd = COMMANDS['reboot'];
+
+    const paramDesc = params.forceReboot ? '强制重启' : '正常重启';
+    const results: CommandResult[] = targets.map(d => ({
+      deviceId: d.id,
+      deviceName: d.name,
+      commandLabel: `${cmd.label} (${paramDesc})`,
+      status: 'pending' as const,
+    }));
+    setCommandResults(results);
+    setShowCommandResult(true);
+
+    targets.forEach((d, i) => {
+      const delay = Math.floor(Math.random() * 2500) + 500;
+      setTimeout(() => {
+        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
+        setCommandResults(prev => prev.map((r, j) =>
+          j === i ? {
+            ...r,
+            status: success ? 'success' as const : 'fail' as const,
+            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
+          } : r
+        ));
+      }, delay);
+    });
+  };
+
+  const handleRingBellConfirm = (params: RingBellParams) => {
+    const targets = powerOffTargets;
+    if (targets.length === 0) return;
+    const ringtone = RINGTONE_OPTIONS.find(r => r.id === params.ringtoneId);
+    const cmd = COMMANDS['ringBell'];
+
+    const paramDesc = `${ringtone?.label || '经典铃声'} · ${params.durationSeconds}秒`;
+    const results: CommandResult[] = targets.map(d => ({
+      deviceId: d.id,
+      deviceName: d.name,
+      commandLabel: `${cmd.label} (${paramDesc})`,
+      status: 'pending' as const,
+    }));
+    setCommandResults(results);
+    setShowCommandResult(true);
+
+    targets.forEach((d, i) => {
+      const delay = Math.floor(Math.random() * 2500) + 500;
+      setTimeout(() => {
+        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
+        setCommandResults(prev => prev.map((r, j) =>
+          j === i ? {
+            ...r,
+            status: success ? 'success' as const : 'fail' as const,
+            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
+          } : r
+        ));
+      }, delay);
+    });
+  };
+
+  const handleVolumeControlConfirm = (params: VolumeControlParams) => {
+    const targets = powerOffTargets;
+    if (targets.length === 0) return;
+    const cmd = COMMANDS['volControl'];
+    const modeLabel = params.mode === 'increase' ? '增加' : '减小';
+
+    const paramDesc = `${modeLabel} · 音量设为 ${params.volume}%`;
+    const results: CommandResult[] = targets.map(d => ({
+      deviceId: d.id,
+      deviceName: d.name,
+      commandLabel: `${cmd.label} (${paramDesc})`,
+      status: 'pending' as const,
+    }));
+    setCommandResults(results);
+    setShowCommandResult(true);
+
+    targets.forEach((d, i) => {
+      const delay = Math.floor(Math.random() * 2500) + 500;
+      setTimeout(() => {
+        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
+        setCommandResults(prev => prev.map((r, j) =>
+          j === i ? {
+            ...r,
+            status: success ? 'success' as const : 'fail' as const,
+            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
+          } : r
+        ));
+      }, delay);
+    });
+  };
+
+  const handleCountdownConfirm = (params: CountdownParams) => {
+    const targets = countdownTargets;
+    if (targets.length === 0) return;
+    const cmd = COMMANDS['countdown'];
+    const statusText = params.enabled ? '已开启' : '已关闭';
+    const paramDesc = `${statusText} · ${params.eventName} · 目标 ${params.targetDate}`;
+    const results: CommandResult[] = targets.map(d => ({
+      deviceId: d.id,
+      deviceName: d.name,
+      commandLabel: `${cmd.label} (${paramDesc})`,
+      status: 'pending' as const,
+    }));
+    setCommandResults(results);
+    setShowCommandResult(true);
+
+    targets.forEach((d, i) => {
+      const delay = Math.floor(Math.random() * 2500) + 500;
+      setTimeout(() => {
+        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
+        setCommandResults(prev => prev.map((r, j) =>
+          j === i ? {
+            ...r,
+            status: success ? 'success' as const : 'fail' as const,
+            message: success ? '倒计日已下发至设备' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
+          } : r
+        ));
+      }, delay);
+    });
   };
 
   return (
@@ -1468,6 +2122,7 @@ export default function DeviceManagement() {
         device={desktopDevice}
         open={Boolean(desktopDevice)}
         onClose={() => setDesktopDevice(null)}
+        onOpenSendMessage={handleOpenSendMessage}
       />
 
       {/* 文件分发弹窗 */}
@@ -1479,9 +2134,10 @@ export default function DeviceManagement() {
 
       {/* 发送消息弹窗 */}
       <SendMessageDialog
+        target={messageTarget ? { id: messageTarget.id, name: messageTarget.name, room: messageTarget.room, deviceCode: messageTarget.code } : null}
         open={showSendMsg}
-        devices={selectedDevices}
-        onClose={() => setShowSendMsg(false)}
+        onClose={() => { setShowSendMsg(false); setMessageTarget(null); }}
+        onSend={handleSendMessage}
       />
 
       {/* 指令执行结果 */}
@@ -1498,6 +2154,166 @@ export default function DeviceManagement() {
         onCommand={(cmdId) => { handleCommand(cmdId); }}
         deviceCount={selectedDevices.length}
       />
+
+      {/* 关机参数设置弹窗 */}
+      <PowerOffDialog
+        open={showPowerOff}
+        deviceCount={powerOffTargets.length}
+        onClose={() => setShowPowerOff(false)}
+        onConfirm={handlePowerOffConfirm}
+      />
+
+      {/* 重启参数设置弹窗 */}
+      <RebootDialog
+        open={showReboot}
+        deviceCount={powerOffTargets.length}
+        onClose={() => setShowReboot(false)}
+        onConfirm={handleRebootConfirm}
+      />
+
+      {/* 打铃参数设置弹窗 */}
+      <RingBellDialog
+        open={showRingBell}
+        deviceCount={powerOffTargets.length}
+        onClose={() => setShowRingBell(false)}
+        onConfirm={handleRingBellConfirm}
+      />
+
+      {/* 音量控制设置弹窗 */}
+      <VolumeControlDialog
+        open={showVolumeControl}
+        deviceCount={powerOffTargets.length}
+        onClose={() => setShowVolumeControl(false)}
+        onConfirm={handleVolumeControlConfirm}
+      />
+
+      {/* 倒计日设置弹窗 */}
+      <CountdownSetting
+        open={showCountdown}
+        deviceCount={countdownTargets.length}
+        onClose={() => setShowCountdown(false)}
+        onConfirm={handleCountdownConfirm}
+      />
     </Box>
+  );
+}
+
+// ─── 倒计日设置弹窗 ───
+
+interface CountdownSettingProps {
+  open: boolean;
+  deviceCount: number;
+  onClose: () => void;
+  onConfirm: (params: CountdownParams) => void;
+}
+
+function CountdownSetting({ open, deviceCount, onClose, onConfirm }: CountdownSettingProps) {
+  const [enabled, setEnabled] = useState(true);
+  const [eventName, setEventName] = useState('高考');
+  const [targetDate, setTargetDate] = useState(() => {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split('T')[0];
+  });
+
+  const calcDays = (): number => {
+    if (!targetDate) return 0;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const target = new Date(targetDate);
+    target.setHours(0, 0, 0, 0);
+    const diff = Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return diff >= 0 ? diff : 0;
+  };
+
+  const days = calcDays();
+
+  const handleConfirm = () => {
+    onConfirm({ enabled, eventName, targetDate });
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb' }}>
+        <Box className="flex items-center gap-2">
+          <Typography variant="h6">倒计日设置</Typography>
+        </Box>
+      </DialogTitle>
+      <DialogContent sx={{ pt: '20px !important' }}>
+        <Typography variant="body2" color="text.secondary" className="mb-4">
+          目标设备：<strong>{deviceCount}</strong> 台
+        </Typography>
+
+        {/* 开启/关闭开关 */}
+        <Box className="flex items-center justify-between mb-5">
+          <Box>
+            <Typography variant="body2" className="font-medium">启用倒计日</Typography>
+            <Typography variant="caption" color="text.secondary">开启后将在设备桌面右上角常驻显示倒计时</Typography>
+          </Box>
+          <Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
+        </Box>
+
+        <Divider className="mb-4" />
+
+        {/* 事件名称 */}
+        <Typography variant="body2" className="font-medium mb-2">事件名称</Typography>
+        <TextField
+          fullWidth
+          size="small"
+          value={eventName}
+          onChange={(e) => setEventName(e.target.value)}
+          placeholder="请输入事件名称，如：高考、期末考试等"
+          sx={{ mb: 4 }}
+        />
+
+        {/* 目标日期 */}
+        <Typography variant="body2" className="font-medium mb-2">目标日期</Typography>
+        <TextField
+          fullWidth
+          size="small"
+          type="date"
+          value={targetDate}
+          onChange={(e) => setTargetDate(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ min: new Date().toISOString().split('T')[0] }}
+          sx={{ mb: 4 }}
+        />
+
+        {/* 预览效果 */}
+        <Typography variant="body2" className="font-medium mb-2">预览效果</Typography>
+        <Box
+          sx={{
+            borderRadius: 3,
+            border: '2px solid',
+            borderColor: enabled ? '#3b82f6' : '#e5e7eb',
+            p: 3,
+            textAlign: 'center',
+            backgroundColor: enabled ? '#eff6ff' : '#f9fafb',
+            opacity: enabled ? 1 : 0.5,
+            transition: 'all 0.2s',
+          }}
+        >
+          <Typography variant="body2" sx={{ color: enabled ? '#2563eb' : '#9ca3af', fontWeight: 500, mb: 1 }}>
+            距离 {eventName || '未命名事件'}
+          </Typography>
+          <Box className="flex items-center justify-center gap-2 mb-1">
+            <Typography variant="h4" className="font-bold" sx={{ color: enabled ? '#1e40af' : '#9ca3af', fontFamily: 'monospace', fontSize: 42, lineHeight: 1 }}>
+              {days}
+            </Typography>
+            <Typography variant="body1" sx={{ color: enabled ? '#3b82f6' : '#9ca3af', fontWeight: 600 }}>天</Typography>
+          </Box>
+          <Typography variant="caption" sx={{ color: '#94a3b8', mt: 0.5, display: 'block' }}>
+            目标日期：{targetDate || '未设置'}
+          </Typography>
+        </Box>
+      </DialogContent>
+      <DialogActions className="px-6 pb-4">
+        <Button onClick={onClose} variant="outlined">取消</Button>
+        <Button onClick={handleConfirm} variant="contained" disabled={!eventName.trim() || !targetDate}>
+          下发至设备
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
