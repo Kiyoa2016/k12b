@@ -790,60 +790,6 @@ function BatchActionBar({
   );
 }
 
-// ─── 指令执行结果弹窗 ───
-function CommandResultDialog({
-  open, results, onClose,
-}: {
-  open: boolean;
-  results: CommandResult[];
-  onClose: () => void;
-}) {
-  const successCount = results.filter(r => r.status === 'success').length;
-  const failCount = results.filter(r => r.status === 'fail').length;
-  const pendingCount = results.filter(r => r.status === 'pending').length;
-  const commandLabel = results[0]?.commandLabel || '';
-  const isComplete = pendingCount === 0;
-
-  return (
-    <Dialog open={open} onClose={isComplete ? onClose : undefined} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Box className="flex items-center gap-2">
-          <Send className="text-blue-600" />
-          <Typography variant="h6">指令执行结果</Typography>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Typography variant="body2" className="mb-3 font-medium">正在执行：{commandLabel}</Typography>
-        <Box className="space-y-2">
-          {results.map(r => (
-            <Box key={r.deviceId} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
-              {r.status === 'pending' ? (
-                <CircularProgress size={16} />
-              ) : r.status === 'success' ? (
-                <CheckCircle sx={{ fontSize: 18, color: '#22c55e' }} />
-              ) : (
-                <Cancel sx={{ fontSize: 18, color: '#ef4444' }} />
-              )}
-              <Typography variant="body2" className="flex-1">{r.deviceName}</Typography>
-              <Typography variant="caption" color={r.status === 'fail' ? 'error' : 'text.secondary'}>
-                {r.status === 'pending' ? '等待中...' : r.message}
-              </Typography>
-            </Box>
-          ))}
-        </Box>
-        <Box className="mt-3 p-2 bg-gray-100 rounded-lg text-center">
-          <Typography variant="caption" color="text.secondary">
-            成功 {successCount} / 失败 {failCount}{pendingCount > 0 ? ` / 等待中 ${pendingCount}` : ''}
-          </Typography>
-        </Box>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} variant="contained" disabled={!isComplete}>我知道了</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 // ─── 视频流类型 ───
 type StreamType = 'teacher' | 'student' | 'blackboard';
 
@@ -1813,8 +1759,6 @@ export default function DeviceManagement() {
   const [showCountdown, setShowCountdown] = useState(false);
   const [countdownTargets, setCountdownTargets] = useState<DeviceMgmtDevice[]>([]);
   const [showBatchCmd, setShowBatchCmd] = useState(false);
-  const [showCommandResult, setShowCommandResult] = useState(false);
-  const [commandResults, setCommandResults] = useState<CommandResult[]>([]);
   const [cmdSnackbar, setCmdSnackbar] = useState<{ open: boolean; message: string; severity?: 'success' | 'info' | 'warning' | 'error' }>({ open: false, message: '' });
 
   // ── 衍生数据 ──
@@ -1909,32 +1853,7 @@ export default function DeviceManagement() {
       return;
     }
 
-    // Simulate command execution
-    const results: CommandResult[] = targets.map(d => ({
-      deviceId: d.id,
-      deviceName: d.name,
-      commandLabel: cmd.label,
-      status: 'pending' as const,
-    }));
-    setCommandResults(results);
-    setShowCommandResult(true);
-    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
-
-    let completed = 0;
-    targets.forEach((d, i) => {
-      const delay = Math.floor(Math.random() * 2500) + 500;
-      setTimeout(() => {
-        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
-        setCommandResults(prev => prev.map((r, j) =>
-          j === i ? {
-            ...r,
-            status: success ? 'success' as const : 'fail' as const,
-            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
-          } : r
-        ));
-        completed++;
-      }, delay);
-    });
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'success' });
   };
 
   const handleActionMenuCommand = (commandId: string) => {
@@ -1958,134 +1877,28 @@ export default function DeviceManagement() {
     const targets = powerOffTargets;
     if (targets.length === 0) return;
     const cmd = COMMANDS['powerOff'];
-
-    // 构建参数描述
-    const scheduleDesc = params.scheduleType === 'weekly'
-      ? `每周${params.weeklyDays.map(d => WEEKDAY_LABELS[d - 1]).join('、')} ${params.shutdownTime}`
-      : '单次执行';
-    const paramDesc = [
-      params.forceShutdown ? '强制关机' : '正常关机',
-      scheduleDesc,
-    ].join(' · ');
-
-    const results: CommandResult[] = targets.map(d => ({
-      deviceId: d.id,
-      deviceName: d.name,
-      commandLabel: `${cmd.label} (${paramDesc})`,
-      status: 'pending' as const,
-    }));
-    setCommandResults(results);
-    setShowCommandResult(true);
-    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
-
-    targets.forEach((d, i) => {
-      const delay = Math.floor(Math.random() * 2500) + 500;
-      setTimeout(() => {
-        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
-        setCommandResults(prev => prev.map((r, j) =>
-          j === i ? {
-            ...r,
-            status: success ? 'success' as const : 'fail' as const,
-            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
-          } : r
-        ));
-      }, delay);
-    });
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'success' });
   };
 
   const handleRebootConfirm = (params: RebootParams) => {
     const targets = powerOffTargets;
     if (targets.length === 0) return;
     const cmd = COMMANDS['reboot'];
-
-    const paramDesc = params.forceReboot ? '强制重启' : '正常重启';
-    const results: CommandResult[] = targets.map(d => ({
-      deviceId: d.id,
-      deviceName: d.name,
-      commandLabel: `${cmd.label} (${paramDesc})`,
-      status: 'pending' as const,
-    }));
-    setCommandResults(results);
-    setShowCommandResult(true);
-    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
-
-    targets.forEach((d, i) => {
-      const delay = Math.floor(Math.random() * 2500) + 500;
-      setTimeout(() => {
-        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
-        setCommandResults(prev => prev.map((r, j) =>
-          j === i ? {
-            ...r,
-            status: success ? 'success' as const : 'fail' as const,
-            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
-          } : r
-        ));
-      }, delay);
-    });
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'success' });
   };
 
   const handleRingBellConfirm = (params: RingBellParams) => {
     const targets = powerOffTargets;
     if (targets.length === 0) return;
-    const ringtone = RINGTONE_OPTIONS.find(r => r.id === params.ringtoneId);
     const cmd = COMMANDS['ringBell'];
-
-    const paramDesc = `${ringtone?.label || '经典铃声'} · ${params.durationSeconds}秒`;
-    const results: CommandResult[] = targets.map(d => ({
-      deviceId: d.id,
-      deviceName: d.name,
-      commandLabel: `${cmd.label} (${paramDesc})`,
-      status: 'pending' as const,
-    }));
-    setCommandResults(results);
-    setShowCommandResult(true);
-    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
-
-    targets.forEach((d, i) => {
-      const delay = Math.floor(Math.random() * 2500) + 500;
-      setTimeout(() => {
-        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
-        setCommandResults(prev => prev.map((r, j) =>
-          j === i ? {
-            ...r,
-            status: success ? 'success' as const : 'fail' as const,
-            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
-          } : r
-        ));
-      }, delay);
-    });
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'success' });
   };
 
   const handleVolumeControlConfirm = (params: VolumeControlParams) => {
     const targets = powerOffTargets;
     if (targets.length === 0) return;
     const cmd = COMMANDS['volControl'];
-    const modeLabel = params.mode === 'increase' ? '增加' : '减小';
-
-    const paramDesc = `${modeLabel} · 音量设为 ${params.volume}%`;
-    const results: CommandResult[] = targets.map(d => ({
-      deviceId: d.id,
-      deviceName: d.name,
-      commandLabel: `${cmd.label} (${paramDesc})`,
-      status: 'pending' as const,
-    }));
-    setCommandResults(results);
-    setShowCommandResult(true);
-    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
-
-    targets.forEach((d, i) => {
-      const delay = Math.floor(Math.random() * 2500) + 500;
-      setTimeout(() => {
-        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
-        setCommandResults(prev => prev.map((r, j) =>
-          j === i ? {
-            ...r,
-            status: success ? 'success' as const : 'fail' as const,
-            message: success ? '指令已执行' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
-          } : r
-        ));
-      }, delay);
-    });
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'success' });
   };
 
   const handleCountdownConfirm = (params: CountdownParams) => {
@@ -2093,30 +1906,7 @@ export default function DeviceManagement() {
     if (targets.length === 0) return;
     const cmd = COMMANDS['countdown'];
     const statusText = params.enabled ? '已开启' : '已关闭';
-    const paramDesc = `${statusText} · ${params.eventName} · 目标 ${params.targetDate}`;
-    const results: CommandResult[] = targets.map(d => ({
-      deviceId: d.id,
-      deviceName: d.name,
-      commandLabel: `${cmd.label} (${paramDesc})`,
-      status: 'pending' as const,
-    }));
-    setCommandResults(results);
-    setShowCommandResult(true);
-    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
-
-    targets.forEach((d, i) => {
-      const delay = Math.floor(Math.random() * 2500) + 500;
-      setTimeout(() => {
-        const success = d.status === 'online' ? Math.random() < 0.85 : Math.random() < 0.1;
-        setCommandResults(prev => prev.map((r, j) =>
-          j === i ? {
-            ...r,
-            status: success ? 'success' as const : 'fail' as const,
-            message: success ? '倒计日已下发至设备' : d.status !== 'online' ? '设备离线，发送失败' : '执行超时',
-          } : r
-        ));
-      }, delay);
-    });
+    setCmdSnackbar({ open: true, message: `倒计日(${statusText})已下发至 ${targets.length} 台设备`, severity: 'success' });
   };
 
   return (
@@ -2221,13 +2011,6 @@ export default function DeviceManagement() {
         open={showSendMsg}
         onClose={() => { setShowSendMsg(false); setMessageTarget(null); }}
         onSend={handleSendMessage}
-      />
-
-      {/* 指令执行结果 */}
-      <CommandResultDialog
-        open={showCommandResult}
-        results={commandResults}
-        onClose={() => setShowCommandResult(false)}
       />
 
       {/* 批量指令选择弹窗 */}
