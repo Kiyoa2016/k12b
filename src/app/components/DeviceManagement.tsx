@@ -8,6 +8,7 @@ import {
   Select, MenuItem, FormControl, FormControlLabel,
   Checkbox, Switch, Tooltip, Menu, Tabs, Tab,
   Paper, CircularProgress, Divider, RadioGroup, Radio,
+  Snackbar, Alert,
 } from '@mui/material';
 import {
   Devices, CheckCircle, Cancel, Warning, PowerOff,
@@ -1814,6 +1815,7 @@ export default function DeviceManagement() {
   const [showBatchCmd, setShowBatchCmd] = useState(false);
   const [showCommandResult, setShowCommandResult] = useState(false);
   const [commandResults, setCommandResults] = useState<CommandResult[]>([]);
+  const [cmdSnackbar, setCmdSnackbar] = useState<{ open: boolean; message: string; severity?: 'success' | 'info' | 'warning' | 'error' }>({ open: false, message: '' });
 
   // ── 衍生数据 ──
   const buildings = useMemo(() => [...new Set(devices.map(d => d.building))], [devices]);
@@ -1916,6 +1918,7 @@ export default function DeviceManagement() {
     }));
     setCommandResults(results);
     setShowCommandResult(true);
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
 
     let completed = 0;
     targets.forEach((d, i) => {
@@ -1948,8 +1951,7 @@ export default function DeviceManagement() {
   };
 
   const handleSendMessage = (_payload: SendMessagePayload) => {
-    // 消息发送完成后的处理
-    // TODO: 调用实际 API
+    setCmdSnackbar({ open: true, message: '消息指令已下发', severity: 'success' });
   };
 
   const handlePowerOffConfirm = (params: PowerOffParams) => {
@@ -1974,6 +1976,7 @@ export default function DeviceManagement() {
     }));
     setCommandResults(results);
     setShowCommandResult(true);
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
 
     targets.forEach((d, i) => {
       const delay = Math.floor(Math.random() * 2500) + 500;
@@ -2004,6 +2007,7 @@ export default function DeviceManagement() {
     }));
     setCommandResults(results);
     setShowCommandResult(true);
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
 
     targets.forEach((d, i) => {
       const delay = Math.floor(Math.random() * 2500) + 500;
@@ -2035,6 +2039,7 @@ export default function DeviceManagement() {
     }));
     setCommandResults(results);
     setShowCommandResult(true);
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
 
     targets.forEach((d, i) => {
       const delay = Math.floor(Math.random() * 2500) + 500;
@@ -2066,6 +2071,7 @@ export default function DeviceManagement() {
     }));
     setCommandResults(results);
     setShowCommandResult(true);
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
 
     targets.forEach((d, i) => {
       const delay = Math.floor(Math.random() * 2500) + 500;
@@ -2096,6 +2102,7 @@ export default function DeviceManagement() {
     }));
     setCommandResults(results);
     setShowCommandResult(true);
+    setCmdSnackbar({ open: true, message: `${cmd.label}指令已下发至 ${targets.length} 台设备`, severity: 'info' });
 
     targets.forEach((d, i) => {
       const delay = Math.floor(Math.random() * 2500) + 500;
@@ -2270,6 +2277,18 @@ export default function DeviceManagement() {
         onClose={() => setShowCountdown(false)}
         onConfirm={handleCountdownConfirm}
       />
+
+      {/* 指令下发通知 */}
+      <Snackbar
+        open={cmdSnackbar.open}
+        autoHideDuration={2000}
+        onClose={() => setCmdSnackbar({ open: false, message: '' })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={cmdSnackbar.severity || 'success'} variant="filled" sx={{ width: '100%' }}>
+          {cmdSnackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
