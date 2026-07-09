@@ -6,10 +6,17 @@ import {
   Select, MenuItem, Chip,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
-import type { Classroom } from './DevicePatrol';
+
+// ─── 消息目标类型 ───
+export interface MessageTarget {
+  id: string;
+  name: string;
+  room: string;
+  deviceCode: string;
+}
 
 export interface SendMessagePayload {
-  classroomId: string;
+  targetId: string;
   content: string;
   fontSize: 'small' | 'medium' | 'large';
   fontColor: string;
@@ -39,19 +46,18 @@ const FONT_SIZE_OPTIONS = [
 const FONT_COLORS = ['#ffffff', '#ff4444', '#ffbb00', '#44ff44', '#44bbff', '#ff88ff'];
 
 interface SendMessageDialogProps {
-  classroom: Classroom | null;
+  target: MessageTarget | null;
   open: boolean;
   onClose: () => void;
   onSend: (payload: SendMessagePayload) => void;
 }
 
-export default function SendMessageDialog({ classroom, open, onClose, onSend }: SendMessageDialogProps) {
+export default function SendMessageDialog({ target, open, onClose, onSend }: SendMessageDialogProps) {
   const [content, setContent] = useState('');
   const [fontSize, setFontSize] = useState<'small' | 'medium' | 'large'>('medium');
   const [fontColor, setFontColor] = useState('#ffffff');
   const [playMode, setPlayMode] = useState<'marquee' | 'popup'>('marquee');
   const [playCount, setPlayCount] = useState(3);
-  const [touched, setTouched] = useState(false);
   const previewTimeRef = useRef(new Date());
 
   // 弹窗打开时刷新预览时间
@@ -66,7 +72,6 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
     setFontColor('#ffffff');
     setPlayMode('marquee');
     setPlayCount(3);
-    setTouched(false);
     onClose();
   };
 
@@ -81,11 +86,10 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
 
   // 发送
   const handleSend = () => {
-    setTouched(true);
-    if (!isValid || !classroom) return;
+    if (!isValid || !target) return;
     const matchedTemplate = MESSAGE_TEMPLATES.find(t => t.text === content.trim());
     onSend({
-      classroomId: classroom.id,
+      targetId: target.id,
       content: content.trim(),
       fontSize,
       fontColor,
@@ -96,7 +100,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
     handleClose();
   };
 
-  if (!classroom) return null;
+  if (!target) return null;
 
   const fontPx = FONT_SIZE_OPTIONS.find(o => o.value === fontSize)?.px ?? 24;
   const previewWidth = 480;
@@ -106,7 +110,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle sx={{ borderBottom: '1px solid #e5e7eb', py: 1.5 }}>
         <Box className="flex items-center justify-between">
-          <Typography variant="h6" className="font-bold">发送信息 — {classroom.name}</Typography>
+          <Typography variant="h6" className="font-bold">发送信息 — {target.name}</Typography>
           <IconButton onClick={handleClose} size="small"><Close /></IconButton>
         </Box>
       </DialogTitle>
@@ -122,7 +126,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                 {/* 顶部信息条 */}
                 <Box className="absolute top-0 left-0 right-0 flex items-center px-2 z-10" sx={{ height: 24, background: 'linear-gradient(to bottom, rgba(0,0,0,0.55), transparent)' }}>
                   <Typography variant="caption" sx={{ fontSize: 10, color: 'rgba(255,255,255,0.95)', fontWeight: 600 }}>
-                    {classroom.room}教室
+                    {target.room}教室
                   </Typography>
                   <Chip label="在线" size="small" sx={{ ml: 'auto', height: 16, fontSize: 9, backgroundColor: 'rgba(22,163,74,0.7)', color: '#fff', '& .MuiChip-label': { px: 0.5 } }} />
                 </Box>
@@ -164,7 +168,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                 {/* 底部任务栏 */}
                 <Box className="absolute bottom-0 left-0 right-0 flex items-center px-2" sx={{ height: 20, backgroundColor: 'rgba(0,0,0,0.5)' }}>
                   <Typography variant="caption" sx={{ fontSize: 8, color: 'rgba(255,255,255,0.7)' }}>
-                    {classroom.deviceCode}
+                    {target.deviceCode}
                   </Typography>
                   <Typography variant="caption" sx={{ fontSize: 8, color: 'rgba(255,255,255,0.5)', ml: 'auto' }}>
                     {previewTimeRef.current.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
@@ -188,8 +192,8 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
                 placeholder="请输入消息内容..."
                 value={content}
                 onChange={(e) => setContent(e.target.value.slice(0, 150))}
-                error={touched && (content.trim().length === 0 || content.length > 150)}
-                helperText={touched && content.trim().length === 0 ? '消息内容不能为空' : ''}
+                error={content.trim().length === 0 || content.length > 150}
+                helperText={content.trim().length === 0 ? '消息内容不能为空' : ''}
                 size="small"
                 sx={{
                   '& .MuiOutlinedInput-root': {
@@ -342,7 +346,7 @@ export default function SendMessageDialog({ classroom, open, onClose, onSend }: 
       </DialogContent>
       <DialogActions sx={{ borderTop: '1px solid #e5e7eb', px: 3, py: 1.5 }}>
         <Button onClick={handleClose} variant="outlined" color="inherit">取消</Button>
-        <Button onClick={handleSend} variant="contained" disabled={touched && !isValid}>
+        <Button onClick={handleSend} variant="contained" disabled={!isValid}>
           发送指令
         </Button>
       </DialogActions>
