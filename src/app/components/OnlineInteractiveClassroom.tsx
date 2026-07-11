@@ -6,7 +6,7 @@ import {
 import {
   Videocam, CameraAlt, PhotoLibrary, ScreenShare,
   Share, StopCircle, PlayArrow, PictureInPicture,
-  CropOriginal, Quiz, Close, ContentCopy, People,
+  CropOriginal, Quiz, Close, ContentCopy, People, MoreVert,
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
 import desktopImage from '../../../image/电脑桌面.png';
@@ -391,8 +391,7 @@ export default function OnlineInteractiveClassroom() {
           <Box className="flex flex-col gap-0.5">
             {participants.map(p => (
               <Box key={p.id}
-                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer"
-                onClick={(e) => { setRoleMenuAnchor(e.currentTarget); setSelectedParticipant(p.id); }}>
+                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 group">
                 <Box className="relative shrink-0">
                   <Box className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
                     p.role === 'teacher' ? 'bg-blue-500' : 'bg-gray-400'
@@ -411,10 +410,10 @@ export default function OnlineInteractiveClassroom() {
                     {p.role === 'teacher' ? '教师' : '学生'} {p.online ? '· 在线' : '· 离线'}
                   </Typography>
                 </Box>
-                {p.role === 'teacher' && (
-                  <Chip label="教师" size="small" color="primary"
-                    sx={{ height: 16, '& .MuiChip-label': { px: 0.4, fontSize: 9 } }} />
-                )}
+                <IconButton size="small" className="!w-5 !h-5 !min-w-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={(e) => { e.stopPropagation(); setRoleMenuAnchor(e.currentTarget); setSelectedParticipant(p.id); }}>
+                  <MoreVert fontSize="inherit" />
+                </IconButton>
               </Box>
             ))}
           </Box>
