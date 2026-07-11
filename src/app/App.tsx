@@ -295,6 +295,7 @@ export default function App() {
             { id: 'cloudclassroom-review', label: '云课堂审核', pageId: 'cloudclassroom-review' },
             { id: 'online-classroom', label: '线上互动课堂', pageId: 'online-classroom' as const },
             { id: 'interactive-classroom-mgmt', label: '互动课堂管理', pageId: 'interactive-classroom-mgmt' as const },
+            { id: 'student-classroom', label: '课堂（学生端）', icon: <School />, pageId: 'student-classroom' as const },
           ],
         },
         {
