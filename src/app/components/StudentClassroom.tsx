@@ -46,8 +46,30 @@ export default function StudentClassroom() {
   const [quizStage, setQuizStage] = useState<'answer' | 'result' | 'idle'>('idle');
   const [selectedOption, setSelectedOption] = useState('');
   const [userVotes, setUserVotes] = useState<Record<string, number>>({});
-  const [quizHistory, setQuizHistory] = useState<QuizRecord[]>([]);
+  const [quizHistory, setQuizHistory] = useState<QuizRecord[]>([
+    {
+      id: 1, question: '请问函数 y=x² 的图像是？',
+      options: ['直线', '抛物线', '双曲线'], correctAnswer: '抛物线',
+      selectedAnswer: '抛物线', votes: { '直线': 3, '抛物线': 12, '双曲线': 5 }, totalVotes: 20,
+    },
+    {
+      id: 2, question: '文言文"之"字在"赤子之心"中的含义是？',
+      options: ['的', '到', '代词', '取消独立性'], correctAnswer: '的',
+      selectedAnswer: '的', votes: { '的': 10, '到': 2, '代词': 5, '取消独立性': 1 }, totalVotes: 18,
+    },
+    {
+      id: 3, question: '现在完成时的结构是？',
+      options: ['have+过去分词', 'be+doing', 'will+do', 'did'], correctAnswer: 'have+过去分词',
+      selectedAnswer: undefined, votes: { 'have+过去分词': 8, 'be+doing': 3, 'will+do': 4, 'did': 1 }, totalVotes: 16,
+    },
+    {
+      id: 4, question: '牛顿第一定律又称为什么？',
+      options: ['万有引力定律', '惯性定律', '作用力与反作用力', '能量守恒'], correctAnswer: '惯性定律',
+      selectedAnswer: '惯性定律', votes: { '万有引力定律': 2, '惯性定律': 14, '作用力与反作用力': 3, '能量守恒': 1 }, totalVotes: 20,
+    },
+  ]);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [selectedHistoryIdx, setSelectedHistoryIdx] = useState(0);
   const totalVotes = Object.values(userVotes).reduce((a, b) => a + b, 0);
 
   // ── 举手 ──
@@ -156,7 +178,7 @@ export default function StudentClassroom() {
           {quizHistory.length > 0 && (
             <Chip icon={<History />} label={quizHistory.length}
               size="small" className="text-white bg-white/20 cursor-pointer hover:bg-white/30"
-              onClick={() => setHistoryOpen(true)}
+              onClick={() => { setHistoryOpen(true); setSelectedHistoryIdx(quizHistory.length - 1); }}
               sx={{ color: 'white', height: 26, '& .MuiChip-icon': { color: 'white', fontSize: 14 } }} />
           )}
           <Chip icon={<People />} label={`在线 ${mockParticipants.filter(p => p.online).length}`}
@@ -174,11 +196,10 @@ export default function StudentClassroom() {
         <img src={desktopImage} alt="课堂画面" className="max-w-full max-h-full object-contain" />
       </Box>
 
-      {/* 底部功能区 */}
-      <Box className="absolute bottom-0 left-0 right-0 z-20 flex flex-col items-center gap-2 p-4">
-        {/* 答题通知 */}
-        {quizActive && !handRaised && callState === 'none' && (
-          <Box className="w-full max-w-sm">
+      {/* 底部答题通知（居中） */}
+      <Box className="absolute bottom-0 left-0 right-0 z-20 flex justify-center p-4 pointer-events-none">
+        {quizActive && (
+          <Box className="pointer-events-auto max-w-sm w-full">
             {quizAnswered ? (
               <Chip label="📊 已作答 查看结果" size="small"
                 onClick={() => setQuizStage('result')}
@@ -201,30 +222,33 @@ export default function StudentClassroom() {
             )}
           </Box>
         )}
+      </Box>
 
-        {/* 举手/语音区域 */}
+      {/* 举手/语音区域（右下角） */}
+      <Box className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
         {!handRaised && callState === 'none' && (
           <Button variant="contained" startIcon={<Box sx={{ fontSize: 16 }}>✋</Box>}
             onClick={() => setHandInputOpen(true)}
             sx={{ borderRadius: 3, bgcolor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(8px)',
-              color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, minWidth: 120 }}>
+              color: 'white', '&:hover': { bgcolor: 'rgba(255,255,255,0.3)' }, minWidth: 100 }}>
             举手
           </Button>
         )}
 
         {handRaised && callState === 'none' && (
-          <Box className="bg-white/90 backdrop-blur rounded-xl p-3 shadow-lg w-full max-w-sm text-center">
-            <Typography variant="body2" className="font-medium">✋ 已举手 - 等待老师回应</Typography>
+          <Box className="bg-white/90 backdrop-blur rounded-xl p-3 shadow-lg min-w-[200px] text-center">
+            <Typography variant="body2" className="font-medium">✋ 已举手</Typography>
             {handMessage && (
               <Typography variant="caption" color="text.secondary" className="block mt-1">"{handMessage}"</Typography>
             )}
-            <Button size="small" color="error" onClick={handleCancelHand} className="mt-2"
-              sx={{ borderRadius: 2 }}>取消举手</Button>
+            <Typography variant="caption" color="text.disabled" className="block mt-0.5">等待老师回应...</Typography>
+            <Button size="small" color="error" onClick={handleCancelHand}
+              sx={{ borderRadius: 2, mt: 1 }}>取消举手</Button>
           </Box>
         )}
 
         {callState === 'calling' && (
-          <Box className="bg-amber-50 rounded-xl p-3 shadow-lg w-full max-w-sm text-center border border-amber-200">
+          <Box className="bg-amber-50 rounded-xl p-3 shadow-lg min-w-[200px] text-center border border-amber-200">
             <Typography variant="body2" className="font-medium">🔔 老师正在接听...</Typography>
             <Button size="small" color="error" onClick={handleCancelHand}
               sx={{ borderRadius: 2, mt: 1 }}>取消</Button>
@@ -232,10 +256,10 @@ export default function StudentClassroom() {
         )}
 
         {callState === 'connected' && (
-          <Box className="bg-green-50 rounded-xl p-3 shadow-lg w-full max-w-sm text-center border border-green-200">
+          <Box className="bg-green-50 rounded-xl p-3 shadow-lg min-w-[200px] text-center border border-green-200">
             <Typography variant="body2" className="font-medium flex items-center justify-center gap-2">
               <Box component="span" className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              🎙️ 正在与老师通话中...
+              🎙️ 通话中
             </Typography>
             {handMessage && (
               <Typography variant="caption" color="text.secondary" className="block mt-1">"{handMessage}"</Typography>
@@ -268,60 +292,134 @@ export default function StudentClassroom() {
         </DialogActions>
       </Dialog>
 
-      {/* ── 答题记录弹窗 ── */}
-      <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} maxWidth="sm" fullWidth
+      {/* ── 答题记录弹窗（机考阅卷风格） ── */}
+      <Dialog open={historyOpen} onClose={() => { setHistoryOpen(false); setSelectedHistoryIdx(0); }} maxWidth="md" fullWidth
         PaperProps={{ className: 'rounded-2xl' }}>
         <DialogTitle className="border-b flex items-center justify-between">
           <Typography variant="h6">📋 答题记录（共{quizHistory.length}次）</Typography>
-          <IconButton onClick={() => setHistoryOpen(false)} size="small"><Close /></IconButton>
+          <IconButton onClick={() => { setHistoryOpen(false); setSelectedHistoryIdx(0); }} size="small"><Close /></IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ minHeight: 380 }}>
           {quizHistory.length === 0 ? (
-            <Box className="py-8 text-center text-gray-400">
+            <Box className="py-12 text-center text-gray-400">
               <Typography variant="body2">暂无答题记录</Typography>
             </Box>
           ) : (
-            <Box className="py-2 flex flex-col gap-3">
-              {quizHistory.map((r, idx) => (
-                <Box key={r.id}>
-                  <Box className="bg-gray-50 rounded-xl p-4">
-                    <Typography variant="caption" color="text.secondary">#{quizHistory.length - idx}</Typography>
-                    <Typography variant="body2" className="font-medium mt-1 mb-2">{r.question}</Typography>
-                    <Box className="flex items-center gap-2 mb-2">
-                      {r.selectedAnswer ? (
-                        <Chip label={`你的答案：${r.selectedAnswer} ${r.selectedAnswer === r.correctAnswer ? '✅' : '❌'}`}
-                          size="small" color={r.selectedAnswer === r.correctAnswer ? 'success' : 'error'}
-                          variant="outlined"
-                          sx={{ height: 22, '& .MuiChip-label': { px: 0.6, fontSize: 10 } }} />
-                      ) : (
-                        <Chip label="你未参与" size="small" variant="outlined" color="default"
-                          sx={{ height: 22, '& .MuiChip-label': { px: 0.6, fontSize: 10 } }} />
-                      )}
-                      <Typography variant="caption" color="text.secondary">{r.totalVotes}人参与</Typography>
-                    </Box>
-                    {/* 迷你柱状图 */}
-                    {Object.entries(r.votes).map(([opt, count]) => {
-                      const max = Math.max(...Object.values(r.votes), 1);
-                      return (
-                        <Box key={opt} className="flex items-center gap-1 text-xs mb-0.5">
-                          <Typography variant="caption" className="w-8 truncate shrink-0">{opt}</Typography>
-                          <Box className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                            <Box className={`h-full rounded-full ${opt === r.correctAnswer ? 'bg-green-400' : 'bg-blue-400'}`}
-                              sx={{ width: `${Math.round(count / max * 100)}%` }} />
-                          </Box>
-                          <Typography variant="caption" className="w-6 text-right text-gray-400">{count}</Typography>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                  {idx < quizHistory.length - 1 && <Divider className="my-2" />}
+            <Box className="flex gap-6 py-2" sx={{ minHeight: 320 }}>
+              {/* 左侧：题号网格 */}
+              <Box className="w-28 shrink-0">
+                <Typography variant="caption" color="text.secondary" className="font-semibold block mb-2 text-center">
+                  答题卡
+                </Typography>
+                <Box className="grid grid-cols-2 gap-2">
+                  {quizHistory.map((r, idx) => {
+                    const isSelected = selectedHistoryIdx === idx;
+                    let bgColor = 'bg-gray-100 text-gray-500'; // 未参与
+                    if (r.selectedAnswer) {
+                      bgColor = r.selectedAnswer === r.correctAnswer
+                        ? 'bg-green-100 text-green-700 border-green-400'   // 正确
+                        : 'bg-red-100 text-red-700 border-red-400';       // 错误
+                    }
+                    return (
+                      <Box key={r.id}
+                        className={`w-10 h-10 rounded-lg flex items-center justify-center cursor-pointer text-sm font-bold border-2 transition-all ${
+                          isSelected ? 'ring-2 ring-blue-400 border-blue-500' : 'border-transparent'
+                        } ${bgColor}`}
+                        onClick={() => setSelectedHistoryIdx(idx)}>
+                        {idx + 1}
+                      </Box>
+                    );
+                  })}
                 </Box>
-              ))}
+                {/* 图例 */}
+                <Box className="mt-4 flex flex-col gap-1 text-[10px] text-gray-400">
+                  <Box className="flex items-center gap-1">
+                    <Box className="w-3 h-3 rounded bg-green-100 border border-green-400" />
+                    <span>正确</span>
+                  </Box>
+                  <Box className="flex items-center gap-1">
+                    <Box className="w-3 h-3 rounded bg-red-100 border border-red-400" />
+                    <span>错误</span>
+                  </Box>
+                  <Box className="flex items-center gap-1">
+                    <Box className="w-3 h-3 rounded bg-gray-100" />
+                    <span>未参与</span>
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* 右侧：题目详情 */}
+              <Box className="flex-1 min-w-0 border-l border-gray-200 pl-6">
+                {(() => {
+                  const r = quizHistory[selectedHistoryIdx];
+                  const idx = selectedHistoryIdx;
+                  const max = Math.max(...Object.values(r.votes), 1);
+                  const total = r.totalVotes;
+                  return (
+                    <Box>
+                      <Typography variant="caption" color="text.secondary" className="font-semibold">
+                        第 {idx + 1} 题
+                      </Typography>
+                      <Typography variant="body1" className="font-medium mt-1 mb-4">
+                        {r.question}
+                      </Typography>
+
+                      {/* 选项列表 */}
+                      <Box className="flex flex-col gap-1.5 mb-4">
+                        {r.options.map((opt, oi) => {
+                          const isCorrect = opt === r.correctAnswer;
+                          const isSelected = opt === r.selectedAnswer;
+                          let borderColor = 'border-gray-200';
+                          let bgColor = '';
+                          let suffix = '';
+                          if (isCorrect && isSelected) { borderColor = 'border-green-400'; bgColor = 'bg-green-50'; suffix = '✅ 正确答案'; }
+                          else if (isCorrect) { borderColor = 'border-green-300'; bgColor = 'bg-green-50/50'; suffix = '✓ 正确答案'; }
+                          else if (isSelected) { borderColor = 'border-red-400'; bgColor = 'bg-red-50'; suffix = '❌ 你的答案'; }
+                          return (
+                            <Box key={opt} className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${borderColor} ${bgColor}`}>
+                              <Typography variant="body2" className="w-5 shrink-0 text-gray-500">
+                                {String.fromCharCode(65 + oi)}.
+                              </Typography>
+                              <Typography variant="body2" className="flex-1">{opt}</Typography>
+                              {suffix && (
+                                <Typography variant="caption" className="shrink-0 font-medium"
+                                  color={isCorrect ? 'green' : 'error'}>
+                                  {suffix}
+                                </Typography>
+                              )}
+                            </Box>
+                          );
+                        })}
+                      </Box>
+
+                      <Typography variant="caption" color="text.secondary" className="block mb-4">
+                        全班 {total} 人参与
+                      </Typography>
+
+                      {/* 全班统计柱状图 */}
+                      <Typography variant="caption" color="text.secondary" className="font-semibold block mb-2">
+                        全班统计
+                      </Typography>
+                      {Object.entries(r.votes).map(([opt, count]) => (
+                        <Box key={opt} className="flex items-center gap-2 text-xs mb-1">
+                          <Typography variant="caption" className="w-10 truncate shrink-0 text-gray-500">{opt}</Typography>
+                          <Box className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden relative">
+                            <Box className={`h-full rounded-full transition-all ${
+                              opt === r.correctAnswer ? 'bg-green-400' : 'bg-blue-400'
+                            }`} sx={{ width: `${Math.round(count / max * 100)}%` }} />
+                          </Box>
+                          <Typography variant="caption" className="w-8 text-right font-mono text-gray-500">{count}人</Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  );
+                })()}
+              </Box>
             </Box>
           )}
         </DialogContent>
         <DialogActions className="px-6 pb-4">
-          <Button onClick={() => setHistoryOpen(false)} variant="outlined">关闭</Button>
+          <Button onClick={() => { setHistoryOpen(false); setSelectedHistoryIdx(0); }} variant="outlined">关闭</Button>
         </DialogActions>
       </Dialog>
 
