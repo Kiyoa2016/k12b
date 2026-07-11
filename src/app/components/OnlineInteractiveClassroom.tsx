@@ -6,7 +6,7 @@ import {
 import {
   Videocam, CameraAlt, PhotoLibrary, ScreenShare,
   Share, StopCircle, PlayArrow, PictureInPicture, GridView,
-  CropOriginal, Quiz, Close, ContentCopy,
+  CropOriginal, Quiz, Close, ContentCopy, People,
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
 
@@ -17,6 +17,14 @@ interface MediaItem {
   src: string;        // data URL or blob URL
   name: string;
   type: 'photo' | 'upload' | 'screenshot';
+}
+
+interface Participant {
+  id: string;
+  name: string;
+  role: 'teacher' | 'student';
+  avatar?: string;
+  online: boolean;
 }
 
 export default function OnlineInteractiveClassroom() {
@@ -46,6 +54,19 @@ export default function OnlineInteractiveClassroom() {
 
   // 二维码
   const [qrDataUrl, setQrDataUrl] = useState('');
+
+  // 参与人员
+  const [participants] = useState<Participant[]>([
+    { id: '1', name: '张老师', role: 'teacher', online: true },
+    { id: '2', name: '李明', role: 'student', online: true },
+    { id: '3', name: '王芳', role: 'student', online: true },
+    { id: '4', name: '赵强', role: 'student', online: true },
+    { id: '5', name: '刘洋', role: 'student', online: false },
+    { id: '6', name: '陈静', role: 'student', online: true },
+    { id: '7', name: '周涛', role: 'student', online: false },
+    { id: '8', name: '吴迪', role: 'student', online: true },
+    { id: '9', name: '孙雨', role: 'student', online: true },
+  ]);
 
   // 摄像头错误
   const [cameraError, setCameraError] = useState('');
@@ -434,7 +455,45 @@ export default function OnlineInteractiveClassroom() {
 
       {/* ===== 主体区域 ===== */}
       <Box className="flex-1 flex overflow-hidden">
-        {/* 左侧：直播画面区 ~65% */}
+        {/* 左侧：参与人员列表 */}
+        <Box className="flex-[1.5] p-3 overflow-auto border-r border-gray-200 bg-white">
+          <Box className="flex items-center gap-1.5 mb-3">
+            <People fontSize="small" className="text-gray-500" />
+            <Typography variant="subtitle2" className="font-semibold text-gray-700">课堂成员</Typography>
+            <Chip label={participants.length} size="small" className="ml-auto"
+              sx={{ height: 18, '& .MuiChip-label': { px: 0.6, fontSize: 10 } }} />
+          </Box>
+          <Box className="flex flex-col gap-0.5">
+            {participants.map(p => (
+              <Box key={p.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50">
+                <Box className="relative shrink-0">
+                  <Box className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
+                    p.role === 'teacher' ? 'bg-blue-500' : 'bg-gray-400'
+                  }`}>
+                    {p.name.charAt(0)}
+                  </Box>
+                  <Box className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white ${
+                    p.online ? 'bg-green-500' : 'bg-gray-300'
+                  }`} />
+                </Box>
+                <Box className="min-w-0 flex-1">
+                  <Typography variant="body2" className="text-sm truncate">
+                    {p.name}
+                  </Typography>
+                  <Typography variant="caption" className="text-gray-400 text-[10px]">
+                    {p.role === 'teacher' ? '教师' : '学生'} {p.online ? '· 在线' : '· 离线'}
+                  </Typography>
+                </Box>
+                {p.role === 'teacher' && (
+                  <Chip label="教师" size="small" color="primary"
+                    sx={{ height: 16, '& .MuiChip-label': { px: 0.4, fontSize: 9 } }} />
+                )}
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        {/* 中间：直播画面区 */}
         <Box className="flex-[7] p-5 overflow-auto" ref={liveAreaRef}>
           <Box className="relative">
             {renderLiveArea()}
@@ -444,8 +503,8 @@ export default function OnlineInteractiveClassroom() {
         {/* 分隔线 */}
         <Divider orientation="vertical" flexItem />
 
-        {/* 右侧：工具栏 ~35% */}
-        <Box className="flex-[3] p-4 overflow-auto flex flex-col gap-4">
+        {/* 右侧：工具栏 ~15% */}
+        <Box className="flex-[1.5] p-4 overflow-auto flex flex-col gap-3">
           {/* ---------- 拍照上传 ---------- */}
           <Box>
             <Typography variant="subtitle2" className="font-semibold mb-2 flex items-center gap-1">
