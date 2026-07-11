@@ -93,6 +93,7 @@ import NewsBroadcast from './components/NewsBroadcast';
 import DevicePatrol from './components/DevicePatrol';
 import OnlineInteractiveClassroom from './components/OnlineInteractiveClassroom';
 import InteractiveClassroomManagement from './components/InteractiveClassroomManagement';
+import StudentClassroom from './components/StudentClassroom';
 
 interface Template {
   id: string;
@@ -104,7 +105,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'supplier' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol' | 'online-classroom' | 'interactive-classroom-mgmt'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'supplier' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol' | 'online-classroom' | 'interactive-classroom-mgmt' | 'student-classroom'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -417,6 +418,8 @@ export default function App() {
           onBack={() => setCurrentPage('cloudclassroom')}
           onPlay={(video) => handleOpenCloudPlay(video, cloudRelated)}
         />
+      ) : currentPage === 'student-classroom' ? (
+        <StudentClassroom />
       ) : currentPage === 'online-classroom' ? (
         <OnlineInteractiveClassroom />
       ) : currentPage === 'interactive-classroom-mgmt' ? (
