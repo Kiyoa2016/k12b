@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import {
   Box, Typography, Button, IconButton, Chip, Dialog, DialogTitle, DialogContent,
-  DialogActions, TextField, Divider, Alert,
+  DialogActions, TextField, Divider, Alert, Menu, MenuItem,
 } from '@mui/material';
 import {
   Videocam, CameraAlt, PhotoLibrary, ScreenShare,
@@ -57,7 +57,7 @@ export default function OnlineInteractiveClassroom() {
   const [qrDataUrl, setQrDataUrl] = useState('');
 
   // 参与人员
-  const [participants] = useState<Participant[]>([
+  const [participants, setParticipants] = useState<Participant[]>([
     { id: '1', name: '张老师', role: 'teacher', online: true },
     { id: '2', name: '李明', role: 'student', online: true },
     { id: '3', name: '王芳', role: 'student', online: true },
@@ -68,6 +68,8 @@ export default function OnlineInteractiveClassroom() {
     { id: '8', name: '吴迪', role: 'student', online: true },
     { id: '9', name: '孙雨', role: 'student', online: true },
   ]);
+  const [roleMenuAnchor, setRoleMenuAnchor] = useState<HTMLElement | null>(null);
+  const [selectedParticipant, setSelectedParticipant] = useState<string | null>(null);
 
   // 摄像头错误
   const [cameraError, setCameraError] = useState('');
@@ -388,7 +390,9 @@ export default function OnlineInteractiveClassroom() {
           </Box>
           <Box className="flex flex-col gap-0.5">
             {participants.map(p => (
-              <Box key={p.id} className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50">
+              <Box key={p.id}
+                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 cursor-pointer"
+                onClick={(e) => { setRoleMenuAnchor(e.currentTarget); setSelectedParticipant(p.id); }}>
                 <Box className="relative shrink-0">
                   <Box className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
                     p.role === 'teacher' ? 'bg-blue-500' : 'bg-gray-400'
@@ -414,6 +418,37 @@ export default function OnlineInteractiveClassroom() {
               </Box>
             ))}
           </Box>
+          {/* 身份切换菜单 */}
+          <Menu
+            anchorEl={roleMenuAnchor}
+            open={Boolean(roleMenuAnchor) && Boolean(selectedParticipant)}
+            onClose={() => { setRoleMenuAnchor(null); setSelectedParticipant(null); }}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+          >
+            <MenuItem
+              selected={participants.find(p => p.id === selectedParticipant)?.role === 'teacher'}
+              onClick={() => {
+                if (selectedParticipant) {
+                  setParticipants(prev => prev.map(p => p.id === selectedParticipant ? { ...p, role: 'teacher' } : p));
+                }
+                setRoleMenuAnchor(null); setSelectedParticipant(null);
+              }}
+            >
+              设为老师
+            </MenuItem>
+            <MenuItem
+              selected={participants.find(p => p.id === selectedParticipant)?.role === 'student'}
+              onClick={() => {
+                if (selectedParticipant) {
+                  setParticipants(prev => prev.map(p => p.id === selectedParticipant ? { ...p, role: 'student' } : p));
+                }
+                setRoleMenuAnchor(null); setSelectedParticipant(null);
+              }}
+            >
+              设为学生
+            </MenuItem>
+          </Menu>
         </Box>
 
         {/* 中间：直播画面区 */}
