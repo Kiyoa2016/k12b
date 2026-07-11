@@ -11,7 +11,7 @@ import {
 import QRCode from 'qrcode';
 import desktopImage from '../../../image/电脑桌面.png';
 
-type LayoutMode = 'teacher' | 'slide' | 'pip';
+type LayoutMode = 'teacher' | 'pip';
 
 interface MediaItem {
   id: string;
@@ -26,6 +26,7 @@ interface Participant {
   role: 'teacher' | 'student';
   avatar?: string;
   online: boolean;
+  handRaised?: { message: string };
 }
 
 export default function OnlineInteractiveClassroom() {
@@ -56,11 +57,14 @@ export default function OnlineInteractiveClassroom() {
   // 二维码
   const [qrDataUrl, setQrDataUrl] = useState('');
 
+  // 语音通话
+  const [callParticipant, setCallParticipant] = useState<string | null>(null);
+
   // 参与人员
   const [participants, setParticipants] = useState<Participant[]>([
     { id: '1', name: '张老师', role: 'teacher', online: true },
     { id: '2', name: '李明', role: 'student', online: true },
-    { id: '3', name: '王芳', role: 'student', online: true },
+    { id: '3', name: '王芳', role: 'student', online: true, handRaised: { message: '老师，这道题能再讲一遍吗？' } },
     { id: '4', name: '赵强', role: 'student', online: true },
     { id: '5', name: '刘洋', role: 'student', online: false },
     { id: '6', name: '陈静', role: 'student', online: true },
@@ -284,8 +288,7 @@ export default function OnlineInteractiveClassroom() {
   // 渲染直播画面区 — 根据布局模式
   const renderLiveArea = () => {
     const teacherView = (
-      <Box className="flex items-center justify-center bg-gray-900 rounded-lg overflow-hidden"
-        sx={{ aspectRatio: '16/9', minHeight: 360 }}>
+      <Box className="w-full h-full flex items-center justify-center bg-gray-900 rounded-lg overflow-hidden">
         <img src={desktopImage} alt="电脑桌面"
           className="w-full h-full object-contain" />
         {/* 叠加层：当前激活的媒体图片 */}
@@ -298,49 +301,28 @@ export default function OnlineInteractiveClassroom() {
       </Box>
     );
 
-    const slideView = (
-      <Box className="flex items-center justify-center bg-gray-900 rounded-lg overflow-hidden"
-        sx={{ aspectRatio: '16/9', minHeight: 360 }}>
-        {activeOverlay && mediaItems.find(m => m.id === activeOverlay) ? (
-          <img src={mediaItems.find(m => m.id === activeOverlay)!.src} alt="slide"
-            className="w-full h-full object-contain" />
-        ) : (
-          <Box className="text-center text-gray-500">
-            <CropOriginal sx={{ fontSize: 64 }} />
-            <Typography variant="body2" className="mt-2">课件/图片画面</Typography>
-            <Typography variant="caption" color="text.secondary" className="block mt-1">
-              从右侧工具栏上传或拍摄图片
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
-
     const pipView = (
-      <Box className="relative bg-gray-900 rounded-lg overflow-hidden"
-        sx={{ aspectRatio: '16/9', minHeight: 360 }}>
-        {/* 主画面：课件 */}
+      <Box className="relative w-full h-full bg-gray-900 rounded-lg overflow-hidden">
+        {/* 主画面：板书 */}
         <Box className="w-full h-full flex items-center justify-center">
-          {activeOverlay && mediaItems.find(m => m.id === activeOverlay) ? (
-            <img src={mediaItems.find(m => m.id === activeOverlay)!.src} alt="slide"
-              className="w-full h-full object-contain" />
+          <img src={desktopImage} alt="电脑桌面" className="w-full h-full object-contain" />
+        </Box>
+        {/* PiP 小窗：教师摄像头 */}
+        <Box className="absolute bottom-4 right-4 w-44 h-32 rounded-lg overflow-hidden border-2 border-white shadow-lg bg-gray-800">
+          {cameraStream ? (
+            <video ref={(el) => { if (el) el.srcObject = cameraStream; }} autoPlay playsInline muted
+              className="w-full h-full object-cover" />
           ) : (
-            <Box className="text-center text-gray-500">
-              <CropOriginal sx={{ fontSize: 48 }} />
-              <Typography variant="body2">课件画面</Typography>
+            <Box className="w-full h-full flex items-center justify-center text-gray-500">
+              <Videocam fontSize="small" />
             </Box>
           )}
-        </Box>
-        {/* PiP 小窗：教师 */}
-        <Box className="absolute bottom-4 right-4 w-44 h-32 rounded-lg overflow-hidden border-2 border-white shadow-lg bg-gray-800">
-          <img src={desktopImage} alt="教师画面" className="w-full h-full object-cover" />
         </Box>
       </Box>
     );
 
     switch (layoutMode) {
       case 'teacher': return teacherView;
-      case 'slide': return slideView;
       case 'pip': return pipView;
       default: return teacherView;
     }
@@ -381,7 +363,7 @@ export default function OnlineInteractiveClassroom() {
       {/* ===== 主体区域 ===== */}
       <Box className="flex-1 flex overflow-hidden">
         {/* 左侧：参与人员列表 */}
-        <Box className="flex-[1.5] p-3 overflow-auto border-r border-gray-200 bg-white">
+        <Box className="flex-[1] p-3 overflow-auto border-r border-gray-200 bg-white">
           <Box className="flex items-center gap-1.5 mb-3">
             <People fontSize="small" className="text-gray-500" />
             <Typography variant="subtitle2" className="font-semibold text-gray-700">课堂成员</Typography>
@@ -391,7 +373,9 @@ export default function OnlineInteractiveClassroom() {
           <Box className="flex flex-col gap-0.5">
             {participants.map(p => (
               <Box key={p.id}
-                className="flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 group">
+                className={`flex items-center gap-2 py-1.5 px-2 rounded-lg hover:bg-gray-50 group ${
+                  p.handRaised ? 'bg-amber-50 border border-amber-200' : ''
+                }`}>
                 <Box className="relative shrink-0">
                   <Box className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium ${
                     p.role === 'teacher' ? 'bg-blue-500' : 'bg-gray-400'
@@ -403,21 +387,30 @@ export default function OnlineInteractiveClassroom() {
                   }`} />
                 </Box>
                 <Box className="min-w-0 flex-1">
-                  <Typography variant="body2" className="text-sm truncate">
-                    {p.name}
-                  </Typography>
-                  <Typography variant="caption" className="text-gray-400 text-[10px]">
-                    {p.role === 'teacher' ? '教师' : '学生'} {p.online ? '· 在线' : '· 离线'}
-                  </Typography>
+                  <Box className="flex items-center gap-1">
+                    <Typography variant="body2" className="text-sm truncate">{p.name}</Typography>
+                    {p.handRaised && (
+                      <Typography variant="caption" className="text-amber-600 shrink-0">✋</Typography>
+                    )}
+                  </Box>
+                  {p.handRaised ? (
+                    <Typography variant="caption" className="text-amber-600 text-[10px] truncate block">
+                      {p.handRaised.message}
+                    </Typography>
+                  ) : (
+                    <Typography variant="caption" className="text-gray-400 text-[10px]">
+                      {p.role === 'teacher' ? '教师' : '学生'} {p.online ? '· 在线' : '· 离线'}
+                    </Typography>
+                  )}
                 </Box>
-                <IconButton size="small" className="!w-5 !h-5 !min-w-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                <IconButton size="small" className="!w-5 !h-5 !min-w-0 text-gray-400"
                   onClick={(e) => { e.stopPropagation(); setRoleMenuAnchor(e.currentTarget); setSelectedParticipant(p.id); }}>
                   <MoreVert fontSize="inherit" />
                 </IconButton>
               </Box>
             ))}
           </Box>
-          {/* 身份切换菜单 */}
+          {/* 操作菜单 */}
           <Menu
             anchorEl={roleMenuAnchor}
             open={Boolean(roleMenuAnchor) && Boolean(selectedParticipant)}
@@ -425,35 +418,82 @@ export default function OnlineInteractiveClassroom() {
             anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
             transformOrigin={{ vertical: 'top', horizontal: 'right' }}
           >
-            <MenuItem
-              selected={participants.find(p => p.id === selectedParticipant)?.role === 'teacher'}
-              onClick={() => {
-                if (selectedParticipant) {
-                  setParticipants(prev => prev.map(p => p.id === selectedParticipant ? { ...p, role: 'teacher' } : p));
-                }
-                setRoleMenuAnchor(null); setSelectedParticipant(null);
-              }}
-            >
-              设为老师
-            </MenuItem>
-            <MenuItem
-              selected={participants.find(p => p.id === selectedParticipant)?.role === 'student'}
-              onClick={() => {
-                if (selectedParticipant) {
-                  setParticipants(prev => prev.map(p => p.id === selectedParticipant ? { ...p, role: 'student' } : p));
-                }
-                setRoleMenuAnchor(null); setSelectedParticipant(null);
-              }}
-            >
-              设为学生
-            </MenuItem>
+            {(() => {
+              const p = participants.find(x => x.id === selectedParticipant);
+              if (!p) return null;
+              return (
+                <>
+                  {/* 举手学生专用操作 */}
+                  {p.handRaised && (
+                    <>
+                      <MenuItem onClick={() => {
+                        setCallParticipant(p.id);
+                        setRoleMenuAnchor(null); setSelectedParticipant(null);
+                      }}>
+                        🎙️ 语音对话
+                      </MenuItem>
+                      <MenuItem onClick={() => {
+                        if (selectedParticipant) {
+                          setParticipants(prev => prev.map(x => x.id === selectedParticipant ? { ...x, handRaised: undefined } : x));
+                        }
+                        setRoleMenuAnchor(null); setSelectedParticipant(null);
+                      }}>
+                        ✅ 已处理
+                      </MenuItem>
+                      <Box className="border-t border-gray-100 my-1" />
+                    </>
+                  )}
+                  <MenuItem
+                    selected={p.role === 'teacher'}
+                    onClick={() => {
+                      if (selectedParticipant) {
+                        setParticipants(prev => prev.map(x => x.id === selectedParticipant ? { ...x, role: 'teacher' } : x));
+                      }
+                      setRoleMenuAnchor(null); setSelectedParticipant(null);
+                    }}
+                  >
+                    设为老师
+                  </MenuItem>
+                  <MenuItem
+                    selected={p.role === 'student'}
+                    onClick={() => {
+                      if (selectedParticipant) {
+                        setParticipants(prev => prev.map(x => x.id === selectedParticipant ? { ...x, role: 'student' } : x));
+                      }
+                      setRoleMenuAnchor(null); setSelectedParticipant(null);
+                    }}
+                  >
+                    设为学生
+                  </MenuItem>
+                </>
+              );
+            })()}
           </Menu>
         </Box>
 
         {/* 中间：直播画面区 */}
-        <Box className="flex-[7] p-5 overflow-auto" ref={liveAreaRef}>
-          <Box className="relative">
+        <Box className="flex-[7] p-5 overflow-auto flex flex-col gap-3">
+          <Box className="relative flex-1 flex items-center justify-center">
             {renderLiveArea()}
+          </Box>
+          {/* 布局选择器 */}
+          <Box className="flex items-center gap-2 px-1">
+            <Typography variant="caption" color="text.secondary">布局：</Typography>
+            {([
+              { id: 'teacher' as LayoutMode, icon: <Videocam fontSize="small" />, label: '板书全屏' },
+              { id: 'pip' as LayoutMode, icon: <PictureInPicture fontSize="small" />, label: '画中画' },
+            ]).map(mode => (
+              <Chip
+                key={mode.id}
+                icon={mode.icon}
+                label={mode.label}
+                size="small"
+                onClick={() => setLayoutMode(mode.id)}
+                color={layoutMode === mode.id ? 'primary' : 'default'}
+                variant={layoutMode === mode.id ? 'filled' : 'outlined'}
+                className="cursor-pointer"
+              />
+            ))}
           </Box>
         </Box>
 
@@ -611,32 +651,31 @@ export default function OnlineInteractiveClassroom() {
         </Box>
       </Box>
 
-      {/* ===== 底部控制栏 ===== */}
-      <Box className="border-t border-gray-200 px-6 py-2 bg-white shrink-0 flex items-center justify-between">
-        <Box className="flex items-center gap-2">
-          <Typography variant="caption" color="text.secondary" className="mr-1">布局：</Typography>
-          {([
-            { id: 'teacher' as LayoutMode, icon: <Videocam fontSize="small" />, label: '教师全屏' },
-            { id: 'slide' as LayoutMode, icon: <CropOriginal fontSize="small" />, label: '课件全屏' },
-            { id: 'pip' as LayoutMode, icon: <PictureInPicture fontSize="small" />, label: '画中画' },
-          ]).map(mode => (
-            <Chip
-              key={mode.id}
-              icon={mode.icon}
-              label={mode.label}
-              size="small"
-              onClick={() => setLayoutMode(mode.id)}
-              color={layoutMode === mode.id ? 'primary' : 'default'}
-              variant={layoutMode === mode.id ? 'filled' : 'outlined'}
-              className="cursor-pointer"
-            />
-          ))}
+      {/* ===== 语音通话栏 ===== */}
+      {callParticipant && (
+        <Box className="border-t border-green-200 px-6 py-3 bg-green-50 shrink-0 flex items-center justify-between">
+          <Box className="flex items-center gap-3">
+            <Box className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            <Typography variant="body2" className="font-medium text-green-800">
+              🎙️ 正在与 {participants.find(p => p.id === callParticipant)?.name} 通话中...
+            </Typography>
+            {(() => {
+              const p = participants.find(x => x.id === callParticipant);
+              return p?.handRaised?.message ? (
+                <Typography variant="caption" className="text-green-600">"{p.handRaised.message}"</Typography>
+              ) : null;
+            })()}
+          </Box>
+          <Button size="small" variant="contained" color="error"
+            onClick={() => {
+              setCallParticipant(null);
+              setParticipants(prev => prev.map(p => p.id === callParticipant ? { ...p, handRaised: undefined } : p));
+            }}
+            sx={{ borderRadius: 2 }}>
+            挂断
+          </Button>
         </Box>
-        <Button size="small" variant="text" startIcon={<Share />}
-          onClick={() => setShareDialogOpen(true)}>
-          分享
-        </Button>
-      </Box>
+      )}
 
       {/* ===== 拍照弹窗 ===== */}
       <Dialog open={cameraDialogOpen} onClose={() => { setCameraDialogOpen(false); stopPreviewCamera(); }} maxWidth="sm" fullWidth>
