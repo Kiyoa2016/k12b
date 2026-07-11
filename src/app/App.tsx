@@ -92,6 +92,7 @@ import SmartControl from './components/SmartControl';
 import NewsBroadcast from './components/NewsBroadcast';
 import DevicePatrol from './components/DevicePatrol';
 import OnlineInteractiveClassroom from './components/OnlineInteractiveClassroom';
+import InteractiveClassroomManagement from './components/InteractiveClassroomManagement';
 
 interface Template {
   id: string;
@@ -103,7 +104,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'supplier' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol' | 'online-classroom'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'supplier' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol' | 'online-classroom' | 'interactive-classroom-mgmt'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -291,12 +292,8 @@ export default function App() {
           children: [
             { id: 'cloudclassroom', label: '云课堂', pageId: 'cloudclassroom' },
             { id: 'cloudclassroom-review', label: '云课堂审核', pageId: 'cloudclassroom-review' },
-          ],
-        },
-        {
-          id: 'cloudhall-parent', label: '云空堂', icon: <Videocam />,
-          children: [
             { id: 'online-classroom', label: '线上互动课堂', pageId: 'online-classroom' as const },
+            { id: 'interactive-classroom-mgmt', label: '互动课堂管理', pageId: 'interactive-classroom-mgmt' as const },
           ],
         },
         {
@@ -422,6 +419,8 @@ export default function App() {
         />
       ) : currentPage === 'online-classroom' ? (
         <OnlineInteractiveClassroom />
+      ) : currentPage === 'interactive-classroom-mgmt' ? (
+        <InteractiveClassroomManagement />
       ) : currentPage === 'news-broadcast' ? (
         <NewsBroadcast />
       ) : currentPage === 'central-overview' ? (
