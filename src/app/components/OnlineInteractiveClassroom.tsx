@@ -9,6 +9,7 @@ import {
   CropOriginal, Quiz, Close, ContentCopy, People,
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
+import desktopImage from '../../../image/电脑桌面.png';
 
 type LayoutMode = 'teacher' | 'slide' | 'pip' | 'three-panel';
 
@@ -283,26 +284,8 @@ export default function OnlineInteractiveClassroom() {
     const teacherView = (
       <Box className="flex items-center justify-center bg-gray-900 rounded-lg overflow-hidden"
         sx={{ aspectRatio: '16/9', minHeight: 360 }}>
-        {cameraStream ? (
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            srcObject={cameraStream}
-            className="w-full h-full object-contain"
-          />
-        ) : (
-          <Box className="text-center text-gray-500">
-            <Videocam sx={{ fontSize: 64 }} />
-            <Typography variant="body2" className="mt-2">摄像头画面</Typography>
-            {!isLive && (
-              <Typography variant="caption" color="text.secondary" className="block mt-1">
-                点击"开始直播"启动摄像头
-              </Typography>
-            )}
-          </Box>
-        )}
+        <img src={desktopImage} alt="电脑桌面"
+          className="w-full h-full object-contain" />
         {/* 叠加层：当前激活的媒体图片 */}
         {activeOverlay && mediaItems.find(m => m.id === activeOverlay) && (
           <Box className="absolute bottom-3 right-3 w-32 h-24 rounded-lg overflow-hidden border-2 border-white shadow-lg">
@@ -348,31 +331,16 @@ export default function OnlineInteractiveClassroom() {
         </Box>
         {/* PiP 小窗：教师 */}
         <Box className="absolute bottom-4 right-4 w-44 h-32 rounded-lg overflow-hidden border-2 border-white shadow-lg bg-gray-800">
-          {cameraStream ? (
-            <video autoPlay playsInline muted srcObject={cameraStream}
-              className="w-full h-full object-cover" />
-          ) : (
-            <Box className="w-full h-full flex items-center justify-center text-gray-500">
-              <Videocam fontSize="small" />
-            </Box>
-          )}
+          <img src={desktopImage} alt="教师画面" className="w-full h-full object-cover" />
         </Box>
       </Box>
     );
 
     const threePanelView = (
       <Box className="bg-gray-900 rounded-lg overflow-hidden flex" sx={{ height: 400 }}>
-        {/* 左：教师 */}
-        <Box className="flex-1 flex items-center justify-center border-r border-gray-700">
-          {cameraStream ? (
-            <video autoPlay playsInline muted srcObject={cameraStream}
-              className="w-full h-full object-cover" />
-          ) : (
-            <Box className="text-center text-gray-500">
-              <Videocam sx={{ fontSize: 40 }} />
-              <Typography variant="caption">教师</Typography>
-            </Box>
-          )}
+        {/* 左：教师画面 */}
+        <Box className="flex-1 flex items-center justify-center border-r border-gray-700 overflow-hidden">
+          <img src={desktopImage} alt="教师画面" className="w-full h-full object-cover" />
         </Box>
         {/* 右上：课件 */}
         <Box className="flex-1 flex items-center justify-center border-b border-gray-700">
