@@ -62,7 +62,7 @@ export default function OnlineInteractiveClassroom() {
         cameraPreviewRef.current.srcObject = stream;
       }
     } catch {
-      setCameraError('无法访问摄像头/麦克风，请检查权限设置');
+      setCameraError('无法访问摄像头，请检查权限设置');
     }
   };
 
@@ -85,7 +85,7 @@ export default function OnlineInteractiveClassroom() {
     ctx.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL('image/jpeg');
     const newItem: MediaItem = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       src: dataUrl,
       name: `拍照_${new Date().toLocaleTimeString()}`,
       type: 'photo',
@@ -103,7 +103,7 @@ export default function OnlineInteractiveClassroom() {
       const reader = new FileReader();
       reader.onload = () => {
         const newItem: MediaItem = {
-          id: Date.now().toString() + Math.random(),
+          id: crypto.randomUUID(),
           src: reader.result as string,
           name: file.name,
           type: 'upload',
@@ -117,47 +117,54 @@ export default function OnlineInteractiveClassroom() {
 
   // 截屏
   const captureScreenshot = () => {
-    const video = videoRef.current;
-    if (!video && !cameraStream) {
-      // No video to capture from — take a simple canvas snapshot of the live area
-      const el = liveAreaRef.current;
-      if (!el) return;
-      const canvas = document.createElement('canvas');
-      const rect = el.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = rect.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      // Draw a representation
-      ctx.fillStyle = '#1a1a2e';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      if (activeOverlay && mediaItems.find(m => m.id === activeOverlay)) {
-        const img = new Image();
-        img.onload = () => {
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          finishScreenshot(canvas);
-        };
-        img.src = mediaItems.find(m => m.id === activeOverlay)!.src;
-        return;
-      }
-      finishScreenshot(canvas);
-      return;
-    }
-    // Capture from video
+    // Try the ref first, then fall back to any video in the DOM
+    const video = videoRef.current || document.querySelector('video');
     const canvas = document.createElement('canvas');
-    if (video) {
+
+    if (video && video.readyState >= 2) {
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 480;
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       ctx.drawImage(video, 0, 0);
+      finishScreenshot(canvas);
+      return;
     }
+
+    if (activeOverlay) {
+      const active = mediaItems.find(m => m.id === activeOverlay);
+      if (active) {
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          ctx.drawImage(img, 0, 0);
+          finishScreenshot(canvas);
+        };
+        img.src = active.src;
+        return;
+      }
+    }
+
+    // Fallback: draw a placeholder
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, 640, 480);
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('课堂截图', 320, 240);
     finishScreenshot(canvas);
 
     function finishScreenshot(c: HTMLCanvasElement) {
       const dataUrl = c.toDataURL('image/png');
       const newItem: MediaItem = {
-        id: Date.now().toString(),
+        id: crypto.randomUUID(),
         src: dataUrl,
         name: `截屏_${new Date().toLocaleTimeString()}`,
         type: 'screenshot',
@@ -389,6 +396,7 @@ export default function OnlineInteractiveClassroom() {
       case 'slide': return slideView;
       case 'pip': return pipView;
       case 'three-panel': return threePanelView;
+      default: return teacherView;
     }
   };
 
@@ -663,7 +671,11 @@ export default function OnlineInteractiveClassroom() {
                 {shareUrl}
               </Typography>
               <Button size="small" variant="outlined" startIcon={<ContentCopy />}
-                onClick={() => navigator.clipboard.writeText(shareUrl)}>
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl).catch(() => {
+                    setCameraError('复制链接失败，请手动复制');
+                  });
+                }}>
                 复制
               </Button>
             </Box>
