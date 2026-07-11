@@ -5,13 +5,13 @@ import {
 } from '@mui/material';
 import {
   Videocam, CameraAlt, PhotoLibrary, ScreenShare,
-  Share, StopCircle, PlayArrow, PictureInPicture, GridView,
+  Share, StopCircle, PlayArrow, PictureInPicture,
   CropOriginal, Quiz, Close, ContentCopy, People,
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
 import desktopImage from '../../../image/电脑桌面.png';
 
-type LayoutMode = 'teacher' | 'slide' | 'pip' | 'three-panel';
+type LayoutMode = 'teacher' | 'slide' | 'pip';
 
 interface MediaItem {
   id: string;
@@ -336,55 +336,10 @@ export default function OnlineInteractiveClassroom() {
       </Box>
     );
 
-    const threePanelView = (
-      <Box className="bg-gray-900 rounded-lg overflow-hidden flex" sx={{ height: 400 }}>
-        {/* 左：教师画面 */}
-        <Box className="flex-1 flex items-center justify-center border-r border-gray-700 overflow-hidden">
-          <img src={desktopImage} alt="教师画面" className="w-full h-full object-cover" />
-        </Box>
-        {/* 右上：课件 */}
-        <Box className="flex-1 flex items-center justify-center border-b border-gray-700">
-          {activeOverlay && mediaItems.find(m => m.id === activeOverlay) ? (
-            <img src={mediaItems.find(m => m.id === activeOverlay)!.src} alt="slide"
-              className="w-full h-full object-cover" />
-          ) : (
-            <Box className="text-center text-gray-500">
-              <CropOriginal sx={{ fontSize: 36 }} />
-              <Typography variant="caption">课件</Typography>
-            </Box>
-          )}
-        </Box>
-        {/* 右下：互动区 */}
-        <Box className="flex-1 flex items-center justify-center p-2">
-          {quizActive ? (
-            <Box className="text-center text-white">
-              <Typography variant="caption" className="font-semibold mb-1 block">{quizQuestion}</Typography>
-              {Object.entries(quizVotes).map(([opt, count]) => (
-                <Box key={opt} className="flex items-center gap-1 text-xs mb-0.5">
-                  <Typography variant="caption" className="text-gray-400 w-12 truncate">{opt}</Typography>
-                  <Box className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
-                    <Box className="h-full bg-blue-500 rounded-full" sx={{ width: `${Math.min(100, (count / (Math.max(...Object.values(quizVotes), 1)) * 100))}%` }} />
-                  </Box>
-                  <Typography variant="caption" className="text-gray-400 w-4">{count}</Typography>
-                </Box>
-              ))}
-            </Box>
-          ) : (
-            <Box className="text-center text-gray-500">
-              <Quiz sx={{ fontSize: 36 }} />
-              <Typography variant="caption">互动区</Typography>
-              <Typography variant="caption" className="block">发起答题后显示结果</Typography>
-            </Box>
-          )}
-        </Box>
-      </Box>
-    );
-
     switch (layoutMode) {
       case 'teacher': return teacherView;
       case 'slide': return slideView;
       case 'pip': return pipView;
-      case 'three-panel': return threePanelView;
       default: return teacherView;
     }
   };
@@ -630,7 +585,6 @@ export default function OnlineInteractiveClassroom() {
             { id: 'teacher' as LayoutMode, icon: <Videocam fontSize="small" />, label: '教师全屏' },
             { id: 'slide' as LayoutMode, icon: <CropOriginal fontSize="small" />, label: '课件全屏' },
             { id: 'pip' as LayoutMode, icon: <PictureInPicture fontSize="small" />, label: '画中画' },
-            { id: 'three-panel' as LayoutMode, icon: <GridView fontSize="small" />, label: '三分屏' },
           ]).map(mode => (
             <Chip
               key={mode.id}
