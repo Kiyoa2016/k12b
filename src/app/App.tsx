@@ -91,6 +91,7 @@ import AIImageProcessing from './components/AIImageProcessing';
 import SmartControl from './components/SmartControl';
 import NewsBroadcast from './components/NewsBroadcast';
 import DevicePatrol from './components/DevicePatrol';
+import OnlineInteractiveClassroom from './components/OnlineInteractiveClassroom';
 
 interface Template {
   id: string;
@@ -102,7 +103,7 @@ interface Template {
 }
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'supplier' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol'>('template');
+  const [currentPage, setCurrentPage] = useState<'template' | 'teacher' | 'school' | 'supplier' | 'questionbank' | 'classroom' | 'lecture' | 'lecture-detail' | 'cloudclassroom' | 'cloudclassroom-play' | 'cloudclassroom-review' | 'training-video' | 'training-video-play' | 'training-video-mgmt' | 'role-mgmt' | 'voice-mgmt' | 'central-overview' | 'news-broadcast' | 'device-mgmt' | 'security-policy' | 'operation-log' | 'ai-image' | 'smart-control' | 'device-patrol' | 'online-classroom'>('template');
   const [detailLecture, setDetailLecture] = useState<Lecture | null>(null);
   const [detailVideoMode, setDetailVideoMode] = useState<'live' | 'recorded'>('live');
   const [cloudDetail, setCloudDetail] = useState<CloudVideo | null>(null);
@@ -293,6 +294,12 @@ export default function App() {
           ],
         },
         {
+          id: 'cloudhall-parent', label: '云空堂', icon: <Videocam />,
+          children: [
+            { id: 'online-classroom', label: '线上互动课堂', pageId: 'online-classroom' as const },
+          ],
+        },
+        {
           id: 'central', label: '集控管理', icon: <MenuIcon />,
           children: [
             { id: 'central-overview', label: '总览', pageId: 'central-overview' },
@@ -413,6 +420,8 @@ export default function App() {
           onBack={() => setCurrentPage('cloudclassroom')}
           onPlay={(video) => handleOpenCloudPlay(video, cloudRelated)}
         />
+      ) : currentPage === 'online-classroom' ? (
+        <OnlineInteractiveClassroom />
       ) : currentPage === 'news-broadcast' ? (
         <NewsBroadcast />
       ) : currentPage === 'central-overview' ? (
