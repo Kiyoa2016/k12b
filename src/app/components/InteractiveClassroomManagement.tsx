@@ -59,8 +59,8 @@ export default function InteractiveClassroomManagement() {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [startCastClassroom, setStartCastClassroom] = useState<Classroom | null>(null);
   const [liveSession, setLiveSession] = useState<{ name: string; displayStream: MediaStream } | null>(null);
-  const [displayStream, setDisplayStream] = useState<MediaStream | null>(null);
   const [displayName, setDisplayName] = useState('');
+  const displayStreamRef = useRef<MediaStream | null>(null);
   const displayPreviewRef = useRef<HTMLVideoElement>(null);
 
   const startScreenCapture = useCallback(async () => {
@@ -69,17 +69,14 @@ export default function InteractiveClassroomManagement() {
         video: true,
         audio: true,
       });
-      setDisplayStream(stream);
-      // 从轨道标签获取显示名称
+      displayStreamRef.current = stream;
       const track = stream.getVideoTracks()[0];
       setDisplayName(track.label || '屏幕');
-      // 显示预览
       if (displayPreviewRef.current) {
         displayPreviewRef.current.srcObject = stream;
       }
-      // 用户如果点击浏览器的"停止共享"，自动清理
       track.addEventListener('ended', () => {
-        setDisplayStream(null);
+        displayStreamRef.current = null;
         setDisplayName('');
         if (displayPreviewRef.current) displayPreviewRef.current.srcObject = null;
       });
@@ -88,14 +85,14 @@ export default function InteractiveClassroomManagement() {
     }
   }, []);
 
-  // 弹窗关闭时清理屏幕共享
+  // 弹窗关闭时清理屏幕共享（仅当未开始投屏时）
   useEffect(() => {
-    if (!startCastClassroom && displayStream) {
-      displayStream.getTracks().forEach(t => t.stop());
-      setDisplayStream(null);
+    if (!startCastClassroom && displayStreamRef.current) {
+      displayStreamRef.current.getTracks().forEach(t => t.stop());
+      displayStreamRef.current = null;
       setDisplayName('');
     }
-  }, [startCastClassroom, displayStream]);
+  }, [startCastClassroom]);
 
   useEffect(() => {
     if (shareClassroom) {
@@ -267,7 +264,7 @@ export default function InteractiveClassroomManagement() {
                   选择要共享的屏幕
                 </Typography>
 
-                {!displayStream ? (
+                {!displayStreamRef.current ? (
                   <Box
                     className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all"
                     onClick={startScreenCapture}
@@ -294,8 +291,10 @@ export default function InteractiveClassroomManagement() {
                       </Box>
                       <Button size="small" variant="outlined" color="error"
                         onClick={() => {
-                          displayStream.getTracks().forEach(t => t.stop());
-                          setDisplayStream(null);
+                          if (displayStreamRef.current) {
+                            displayStreamRef.current.getTracks().forEach(t => t.stop());
+                            displayStreamRef.current = null;
+                          }
                           setDisplayName('');
                         }}>
                         重新选择
@@ -306,11 +305,12 @@ export default function InteractiveClassroomManagement() {
               </Box>
 
               <Button variant="contained" size="large" fullWidth
-                disabled={!displayStream}
+                disabled={!displayStreamRef.current}
                 startIcon={<Cast />}
                 onClick={() => {
-                  if (!displayStream) return;
-                  const session = { name: startCastClassroom.name, displayStream };
+                  if (!displayStreamRef.current) return;
+                  const session = { name: startCastClassroom.name, displayStream: displayStreamRef.current };
+                  displayStreamRef.current = null; // 转移所有权，防止清理时被 stop
                   setLiveSession(session);
                   setStartCastClassroom(null);
                 }}

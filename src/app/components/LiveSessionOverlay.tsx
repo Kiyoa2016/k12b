@@ -16,6 +16,7 @@ interface LiveSessionOverlayProps {
 }
 
 export default function LiveSessionOverlay({ classroomName, displayStream, onClose }: LiveSessionOverlayProps) {
+  const stoppedRef = useRef(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [layoutMode, setLayoutMode] = useState<'teacher' | 'pip'>('teacher');
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
@@ -154,17 +155,20 @@ export default function LiveSessionOverlay({ classroomName, displayStream, onClo
 
   // 监听 Esc 退出全屏
   useEffect(() => {
+    let mounted = true;
     const handler = () => {
-      if (!document.fullscreenElement) {
+      if (!document.fullscreenElement && !stoppedRef.current && mounted) {
         doStop();
       }
     };
     document.addEventListener('fullscreenchange', handler);
-    return () => document.removeEventListener('fullscreenchange', handler);
+    return () => { mounted = false; document.removeEventListener('fullscreenchange', handler); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const doStop = () => {
+    if (stoppedRef.current) return;
+    stoppedRef.current = true;
     displayStream.getTracks().forEach(t => t.stop());
     if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
