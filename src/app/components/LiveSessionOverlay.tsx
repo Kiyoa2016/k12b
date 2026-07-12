@@ -224,6 +224,14 @@ export default function LiveSessionOverlay({ classroomName, onClose }: LiveSessi
             </Box>
           )}
         </DialogContent>
+        <DialogActions className="px-6 pb-4 gap-2">
+          <Button onClick={() => setCaptureOpen(false)} variant="outlined" color="inherit">
+            取消
+          </Button>
+          <Button onClick={() => setCaptureOpen(false)} variant="contained" color="primary">
+            保存
+          </Button>
+        </DialogActions>
       </Dialog>
 
       {/* 分享弹窗 */}
