@@ -100,9 +100,32 @@ export default function OnlineInteractiveClassroom() {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  useEffect(() => {
-    return () => { isDragging.current = false; };
-  }, []);
+  const handlePipTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    const rect = pipRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const currentTop = pipPos?.top ?? rect.top;
+    const currentLeft = pipPos?.left ?? rect.left;
+    setPipPos({ top: currentTop, left: currentLeft });
+    dragStart.current = { x: touch.clientX, y: touch.clientY, top: currentTop, left: currentLeft };
+    isDragging.current = true;
+    const onMove = (ev: TouchEvent) => {
+      if (!isDragging.current) return;
+      ev.preventDefault();
+      const t = ev.touches[0];
+      setPipPos({
+        top: dragStart.current.top + t.clientY - dragStart.current.y,
+        left: dragStart.current.left + t.clientX - dragStart.current.x,
+      });
+    };
+    const onEnd = () => {
+      isDragging.current = false;
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', onEnd);
+    };
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', onEnd);
+  };
 
   // 参与人员
   const [participants, setParticipants] = useState<Participant[]>([
@@ -390,32 +413,7 @@ export default function OnlineInteractiveClassroom() {
         <Box
           ref={pipRef}
           onMouseDown={handlePipMouseDown}
-          onTouchStart={(e) => {
-            const touch = e.touches[0];
-            const rect = pipRef.current?.getBoundingClientRect();
-            if (!rect) return;
-            const currentTop = pipPos?.top ?? rect.top;
-            const currentLeft = pipPos?.left ?? rect.left;
-            setPipPos({ top: currentTop, left: currentLeft });
-            dragStart.current = { x: touch.clientX, y: touch.clientY, top: currentTop, left: currentLeft };
-            isDragging.current = true;
-            const onMove = (ev: TouchEvent) => {
-              if (!isDragging.current) return;
-              ev.preventDefault();
-              const t = ev.touches[0];
-              setPipPos({
-                top: dragStart.current.top + t.clientY - dragStart.current.y,
-                left: dragStart.current.left + t.clientX - dragStart.current.x,
-              });
-            };
-            const onEnd = () => {
-              isDragging.current = false;
-              document.removeEventListener('touchmove', onMove);
-              document.removeEventListener('touchend', onEnd);
-            };
-            document.addEventListener('touchmove', onMove, { passive: false });
-            document.addEventListener('touchend', onEnd);
-          }}
+          onTouchStart={handlePipTouchStart}
           className="absolute w-44 h-32 rounded-lg overflow-hidden border-2 border-white shadow-lg bg-gray-800 cursor-grab active:cursor-grabbing select-none"
           sx={pipPos ? { top: pipPos.top, left: pipPos.left } : { bottom: 16, right: 16 }}
         >
@@ -448,35 +446,9 @@ export default function OnlineInteractiveClassroom() {
           activeOverlay={activeOverlay}
           layoutMode={layoutMode}
           pipPos={pipPos}
-          pipRef={pipRef as React.RefObject<HTMLDivElement | null>}
+          pipRef={pipRef}
           onPipMouseDown={handlePipMouseDown}
-          onPipTouchStart={(e) => {
-            // 触目拖拽逻辑（复用现有 handlePipMouseDown 的 touch 版）
-            const touch = e.touches[0];
-            const rect = pipRef.current?.getBoundingClientRect();
-            if (!rect) return;
-            const currentTop = pipPos?.top ?? rect.top;
-            const currentLeft = pipPos?.left ?? rect.left;
-            setPipPos({ top: currentTop, left: currentLeft });
-            dragStart.current = { x: touch.clientX, y: touch.clientY, top: currentTop, left: currentLeft };
-            isDragging.current = true;
-            const onMove = (ev: TouchEvent) => {
-              if (!isDragging.current) return;
-              ev.preventDefault();
-              const t = ev.touches[0];
-              setPipPos({
-                top: dragStart.current.top + t.clientY - dragStart.current.y,
-                left: dragStart.current.left + t.clientX - dragStart.current.x,
-              });
-            };
-            const onEnd = () => {
-              isDragging.current = false;
-              document.removeEventListener('touchmove', onMove);
-              document.removeEventListener('touchend', onEnd);
-            };
-            document.addEventListener('touchmove', onMove, { passive: false });
-            document.addEventListener('touchend', onEnd);
-          }}
+          onPipTouchStart={handlePipTouchStart}
           desktopImage={desktopImage}
         />
         <LiveHUD
