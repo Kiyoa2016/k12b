@@ -15,7 +15,7 @@ import LivePresentation from './LivePresentation';
 import LiveHUD from './LiveHUD';
 import QuizDialog from './QuizDialog';
 
-export default function OnlineInteractiveClassroom() {
+export default function OnlineInteractiveClassroom({ autoStart, onAutoStartDone }: { autoStart?: boolean; onAutoStartDone?: () => void }) {
   // 直播状态
   const [isLive, setIsLive] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('teacher');
@@ -378,6 +378,16 @@ export default function OnlineInteractiveClassroom() {
     return () => document.removeEventListener('fullscreenchange', handler);
   }, [isLive, cameraStream]);
 
+  // 从管理页面跳转过来时自动开播
+  useEffect(() => {
+    if (autoStart && !isLive) {
+      toggleLive();
+      onAutoStartDone?.();
+    }
+    // 只首次执行
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // 渲染直播画面区 — 根据布局模式
   const renderLiveArea = () => {
     const teacherView = (
@@ -557,13 +567,6 @@ export default function OnlineInteractiveClassroom() {
             icon={isLive ? <PlayArrow style={{ color: 'white', fontSize: 14 }} /> : <StopCircle style={{ color: 'white', fontSize: 14 }} />}
             sx={{ height: 24, '& .MuiChip-label': { px: 1, fontSize: 12 } }}
           />
-        </Box>
-        <Box className="flex gap-2">
-          <Button variant="contained" color={isLive ? 'error' : 'primary'}
-            startIcon={isLive ? <StopCircle /> : <PlayArrow />}
-            onClick={toggleLive}>
-            {isLive ? '停止直播' : '开始直播'}
-          </Button>
         </Box>
       </Box>
 

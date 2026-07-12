@@ -6,7 +6,7 @@ import {
   Paper,
 } from '@mui/material';
 import {
-  Add, Search, Edit, Delete, Close, Videocam, School, People, Share, ContentCopy, OpenInNew,
+  Add, Search, Edit, Delete, Close, Videocam, School, People, Share, ContentCopy, OpenInNew, PlayArrow,
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
 
@@ -46,7 +46,7 @@ function generateMockData(): Classroom[] {
   }));
 }
 
-export default function InteractiveClassroomManagement() {
+export default function InteractiveClassroomManagement({ onStartLive }: { onStartLive?: (classroom: Classroom) => void }) {
   const [classrooms] = useState(generateMockData);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
@@ -167,6 +167,14 @@ export default function InteractiveClassroomManagement() {
                     </Box>
                   </TableCell>
                   <TableCell align="right">
+                    {c.status === 'scheduled' && (
+                      <Button size="small" variant="contained" color="success"
+                        startIcon={<PlayArrow />}
+                        onClick={() => onStartLive?.(c)}
+                        sx={{ mr: 1, height: 28, fontSize: 12 }}>
+                        开始直播
+                      </Button>
+                    )}
                     <IconButton size="small" className="text-gray-400" title="分享"
                       onClick={() => { setShareClassroom(c); setShareDialogOpen(true); }}>
                       <Share fontSize="small" />

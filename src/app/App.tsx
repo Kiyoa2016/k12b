@@ -122,6 +122,7 @@ export default function App() {
   const [uploadType, setUploadType] = useState<'课件' | '教案' | '评分表'>('课件');
   const [dragActive, setDragActive] = useState(false);
   const [configRole, setConfigRole] = useState<Role | null>(null);
+  const [autoStartLive, setAutoStartLive] = useState(false);
 
   // 示例数据
   const [templates, setTemplates] = useState<Template[]>([
@@ -422,9 +423,13 @@ export default function App() {
       ) : currentPage === 'student-classroom' ? (
         <StudentClassroom />
       ) : currentPage === 'online-classroom' ? (
-        <OnlineInteractiveClassroom />
+        <OnlineInteractiveClassroom autoStart={autoStartLive}
+          onAutoStartDone={() => setAutoStartLive(false)} />
       ) : currentPage === 'interactive-classroom-mgmt' ? (
-        <InteractiveClassroomManagement />
+        <InteractiveClassroomManagement onStartLive={(classroom) => {
+          setAutoStartLive(true);
+          setCurrentPage('online-classroom');
+        }} />
       ) : currentPage === 'news-broadcast' ? (
         <NewsBroadcast />
       ) : currentPage === 'central-overview' ? (
