@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Box, Typography, Chip, IconButton, Tooltip } from '@mui/material';
 import {
   Videocam, PictureInPicture, CameraAlt, CropOriginal,
@@ -8,14 +8,13 @@ import {
 type LayoutMode = 'teacher' | 'pip';
 
 interface LiveHUDProps {
-  isLive: boolean;
   onlineCount: number;
   layoutMode: LayoutMode;
   onLayoutChange: (mode: LayoutMode) => void;
   onAction: (action: 'photo' | 'screenshot' | 'quiz' | 'share' | 'stop') => void;
 }
 
-export default function LiveHUD({ isLive, onlineCount, layoutMode, onLayoutChange, onAction }: LiveHUDProps) {
+export default function LiveHUD({ onlineCount, layoutMode, onLayoutChange, onAction }: LiveHUDProps) {
   const [visible, setVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isHovering = useRef(false);
@@ -27,17 +26,17 @@ export default function LiveHUD({ isLive, onlineCount, layoutMode, onLayoutChang
     return () => clearTimeout(t);
   }, []);
 
-  const show = () => {
+  const show = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     setVisible(true);
-  };
+  }, []);
 
-  const scheduleHide = () => {
+  const scheduleHide = useCallback(() => {
     if (hideTimer.current) clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
       if (!isHovering.current) setVisible(false);
     }, 2000);
-  };
+  }, []);
 
   const layoutOptions: { id: LayoutMode; icon: React.ReactNode; label: string }[] = [
     { id: 'teacher', icon: <Videocam fontSize="small" />, label: '板书全屏' },
@@ -55,7 +54,7 @@ export default function LiveHUD({ isLive, onlineCount, layoutMode, onLayoutChang
       />
       {/* HUD 控制栏 */}
       <Box
-        className="fixed top-0 left-0 right-0 z-50 transition-all duration-250 ease-in-out"
+        className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out"
         sx={{
           transform: visible ? 'translateY(0)' : 'translateY(-100%)',
           opacity: visible ? 1 : 0,
@@ -100,14 +99,14 @@ export default function LiveHUD({ isLive, onlineCount, layoutMode, onLayoutChang
               { key: 'share' as const, icon: <Share fontSize="small" />, label: '分享' },
             ]).map(btn => (
               <Tooltip key={btn.key} title={btn.label} arrow>
-                <IconButton size="small" onClick={() => onAction(btn.key)}
+                <IconButton size="small" onClick={() => onAction(btn.key)} aria-label={btn.label}
                   sx={{ color: 'rgba(255,255,255,0.85)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' } }}>
                   {btn.icon}
                 </IconButton>
               </Tooltip>
             ))}
             {/* 停止直播 */}
-            <IconButton size="small" onClick={() => onAction('stop')}
+            <IconButton size="small" onClick={() => onAction('stop')} aria-label="停止直播"
               sx={{ color: '#ef4444', ml: 1, '&:hover': { bgcolor: 'rgba(239,68,68,0.15)' } }}>
               <StopCircle fontSize="small" />
             </IconButton>
