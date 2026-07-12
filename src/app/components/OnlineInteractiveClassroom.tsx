@@ -10,6 +10,8 @@ import {
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
 import desktopImage from '../../../image/电脑桌面.png';
+import LivePresentation from './LivePresentation';
+import LiveHUD from './LiveHUD';
 
 type LayoutMode = 'teacher' | 'pip';
 
@@ -57,8 +59,50 @@ export default function OnlineInteractiveClassroom() {
   // 二维码
   const [qrDataUrl, setQrDataUrl] = useState('');
 
+  // 停止直播确认弹窗
+  const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+
   // 语音通话
   const [callParticipant, setCallParticipant] = useState<string | null>(null);
+
+  // 画中画拖拽
+  const [pipPos, setPipPos] = useState<{ top: number; left: number } | null>(null);
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0, top: 0, left: 0 });
+  const pipRef = useRef<HTMLDivElement>(null);
+
+  const handlePipMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const rect = pipRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const currentTop = pipPos?.top ?? rect.top;
+    const currentLeft = pipPos?.left ?? rect.left;
+    setPipPos({ top: currentTop, left: currentLeft });
+    dragStart.current = { x: e.clientX, y: e.clientY, top: currentTop, left: currentLeft };
+    isDragging.current = true;
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isDragging.current) return;
+      setPipPos({
+        top: dragStart.current.top + ev.clientY - dragStart.current.y,
+        left: dragStart.current.left + ev.clientX - dragStart.current.x,
+      });
+    };
+
+    const handleMouseUp = () => {
+      isDragging.current = false;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  useEffect(() => {
+    return () => { isDragging.current = false; };
+  }, []);
 
   // 参与人员
   const [participants, setParticipants] = useState<Participant[]>([
@@ -245,21 +289,40 @@ export default function OnlineInteractiveClassroom() {
   // 直播推流控制
   const toggleLive = async () => {
     if (isLive) {
-      // 停止推流
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        setCameraStream(null);
-      }
-      setIsLive(false);
+      setStopConfirmOpen(true);  // 改为弹出确认
     } else {
       // 开始推流
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         setCameraStream(stream);
         setIsLive(true);
+        // 触发全屏 API
+        setTimeout(() => {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }, 100);
       } catch {
         setCameraError('无法启动摄像头/麦克风');
       }
+    }
+  };
+
+  const confirmStopLive = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      setCameraStream(null);
+    }
+    setIsLive(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    setStopConfirmOpen(false);
+  };
+
+  const handleHUDAction = (action: 'photo' | 'screenshot' | 'quiz' | 'share' | 'stop') => {
+    switch (action) {
+      case 'photo': setCameraDialogOpen(true); break;
+      case 'screenshot': captureScreenshot(); break;
+      case 'quiz': /* TODO: open quiz dialog in Task 4 */ break;
+      case 'share': setShareDialogOpen(true); break;
+      case 'stop': setStopConfirmOpen(true); break;
     }
   };
 
@@ -285,6 +348,22 @@ export default function OnlineInteractiveClassroom() {
     QRCode.toDataURL(shareUrl, { width: 192, margin: 2 }).then(setQrDataUrl);
   }, [shareUrl]);
 
+  // 监听 Fullscreen 退出（用户按 Esc）
+  useEffect(() => {
+    const handler = () => {
+      if (!document.fullscreenElement && isLive) {
+        // 用户按 Esc 退出全屏 → 自动停止直播
+        if (cameraStream) {
+          cameraStream.getTracks().forEach(t => t.stop());
+          setCameraStream(null);
+        }
+        setIsLive(false);
+      }
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, [isLive, cameraStream]);
+
   // 渲染直播画面区 — 根据布局模式
   const renderLiveArea = () => {
     const teacherView = (
@@ -307,11 +386,42 @@ export default function OnlineInteractiveClassroom() {
         <Box className="w-full h-full flex items-center justify-center">
           <img src={desktopImage} alt="电脑桌面" className="w-full h-full object-contain" />
         </Box>
-        {/* PiP 小窗：教师摄像头 */}
-        <Box className="absolute bottom-4 right-4 w-44 h-32 rounded-lg overflow-hidden border-2 border-white shadow-lg bg-gray-800">
+        {/* PiP 小窗：教师摄像头 — 可拖拽 */}
+        <Box
+          ref={pipRef}
+          onMouseDown={handlePipMouseDown}
+          onTouchStart={(e) => {
+            const touch = e.touches[0];
+            const rect = pipRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const currentTop = pipPos?.top ?? rect.top;
+            const currentLeft = pipPos?.left ?? rect.left;
+            setPipPos({ top: currentTop, left: currentLeft });
+            dragStart.current = { x: touch.clientX, y: touch.clientY, top: currentTop, left: currentLeft };
+            isDragging.current = true;
+            const onMove = (ev: TouchEvent) => {
+              if (!isDragging.current) return;
+              ev.preventDefault();
+              const t = ev.touches[0];
+              setPipPos({
+                top: dragStart.current.top + t.clientY - dragStart.current.y,
+                left: dragStart.current.left + t.clientX - dragStart.current.x,
+              });
+            };
+            const onEnd = () => {
+              isDragging.current = false;
+              document.removeEventListener('touchmove', onMove);
+              document.removeEventListener('touchend', onEnd);
+            };
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', onEnd);
+          }}
+          className="absolute w-44 h-32 rounded-lg overflow-hidden border-2 border-white shadow-lg bg-gray-800 cursor-grab active:cursor-grabbing select-none"
+          sx={pipPos ? { top: pipPos.top, left: pipPos.left } : { bottom: 16, right: 16 }}
+        >
           {cameraStream ? (
             <video ref={(el) => { if (el) el.srcObject = cameraStream; }} autoPlay playsInline muted
-              className="w-full h-full object-cover" />
+              className="w-full h-full object-cover pointer-events-none" />
           ) : (
             <Box className="w-full h-full flex items-center justify-center text-gray-500">
               <Videocam fontSize="small" />
@@ -327,6 +437,129 @@ export default function OnlineInteractiveClassroom() {
       default: return teacherView;
     }
   };
+
+  // 直播模式：全屏显示 + HUD
+  if (isLive) {
+    return (
+      <>
+        <LivePresentation
+          cameraStream={cameraStream}
+          mediaItems={mediaItems}
+          activeOverlay={activeOverlay}
+          layoutMode={layoutMode}
+          pipPos={pipPos}
+          pipRef={pipRef as React.RefObject<HTMLDivElement | null>}
+          onPipMouseDown={handlePipMouseDown}
+          onPipTouchStart={(e) => {
+            // 触目拖拽逻辑（复用现有 handlePipMouseDown 的 touch 版）
+            const touch = e.touches[0];
+            const rect = pipRef.current?.getBoundingClientRect();
+            if (!rect) return;
+            const currentTop = pipPos?.top ?? rect.top;
+            const currentLeft = pipPos?.left ?? rect.left;
+            setPipPos({ top: currentTop, left: currentLeft });
+            dragStart.current = { x: touch.clientX, y: touch.clientY, top: currentTop, left: currentLeft };
+            isDragging.current = true;
+            const onMove = (ev: TouchEvent) => {
+              if (!isDragging.current) return;
+              ev.preventDefault();
+              const t = ev.touches[0];
+              setPipPos({
+                top: dragStart.current.top + t.clientY - dragStart.current.y,
+                left: dragStart.current.left + t.clientX - dragStart.current.x,
+              });
+            };
+            const onEnd = () => {
+              isDragging.current = false;
+              document.removeEventListener('touchmove', onMove);
+              document.removeEventListener('touchend', onEnd);
+            };
+            document.addEventListener('touchmove', onMove, { passive: false });
+            document.addEventListener('touchend', onEnd);
+          }}
+          desktopImage={desktopImage}
+        />
+        <LiveHUD
+          onlineCount={participants.filter(p => p.online).length}
+          layoutMode={layoutMode}
+          onLayoutChange={setLayoutMode}
+          onAction={handleHUDAction}
+        />
+
+        {/* 拍照弹窗 */}
+        <Dialog open={cameraDialogOpen} onClose={() => { setCameraDialogOpen(false); stopPreviewCamera(); }} maxWidth="sm" fullWidth>
+          <DialogTitle className="border-b">
+            <Box className="flex items-center justify-between">
+              <Typography variant="h6">拍照</Typography>
+              <IconButton onClick={() => { setCameraDialogOpen(false); stopPreviewCamera(); }} size="small"><Close /></IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box className="py-4">
+              <Box className="bg-black rounded-lg overflow-hidden" sx={{ aspectRatio: '4/3' }}>
+                <video ref={cameraPreviewRef} autoPlay playsInline className="w-full h-full object-contain" />
+              </Box>
+              {mediaItems.length > 0 && (
+                <Box className="flex flex-wrap gap-2 mt-3">
+                  {mediaItems.map(item => (
+                    <img key={item.id} src={item.src} alt={item.name}
+                      className="w-14 h-14 rounded-lg object-cover border-2 border-gray-300" />
+                  ))}
+                </Box>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions className="px-6 pb-4 flex justify-center">
+            <Button variant="contained" startIcon={<CameraAlt />} onClick={capturePhoto}>拍照</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* 分享弹窗 */}
+        <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle className="border-b">
+            <Box className="flex items-center justify-between">
+              <Typography variant="h6">分享直播</Typography>
+              <IconButton onClick={() => setShareDialogOpen(false)} size="small"><Close /></IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Box className="py-6 flex flex-col items-center gap-4">
+              <Box className="w-48 h-48 bg-white rounded-xl flex items-center justify-center border border-gray-200">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt="QR Code" className="w-full h-full" />
+                ) : (
+                  <Typography variant="caption" color="text.secondary">生成中...</Typography>
+                )}
+              </Box>
+              <Typography variant="body2" color="text.secondary" className="text-center">扫码观看直播</Typography>
+              <Box className="w-full p-3 bg-gray-50 rounded-lg flex items-center gap-2">
+                <Typography variant="body2" className="flex-1 truncate text-gray-600 font-mono text-sm">{shareUrl}</Typography>
+                <Button size="small" variant="outlined" startIcon={<ContentCopy />}
+                  onClick={() => navigator.clipboard.writeText(shareUrl).catch(() => setCameraError('复制失败'))}>
+                  复制
+                </Button>
+              </Box>
+            </Box>
+          </DialogContent>
+          <DialogActions className="px-6 pb-4">
+            <Button onClick={() => setShareDialogOpen(false)} variant="outlined">关闭</Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* 停止直播确认弹窗 */}
+        <Dialog open={stopConfirmOpen} onClose={() => setStopConfirmOpen(false)} maxWidth="xs">
+          <DialogTitle>停止直播</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2">确定停止当前直播？画面将停止推流并退出全屏。</Typography>
+          </DialogContent>
+          <DialogActions className="px-6 pb-4">
+            <Button onClick={() => setStopConfirmOpen(false)} variant="outlined">取消</Button>
+            <Button onClick={confirmStopLive} variant="contained" color="error">停止直播</Button>
+          </DialogActions>
+        </Dialog>
+      </>
+    );
+  }
 
   const totalVotes = Object.values(quizVotes).reduce((a, b) => a + b, 0);
 
