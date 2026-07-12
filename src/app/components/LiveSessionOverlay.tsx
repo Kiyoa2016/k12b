@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Box, Typography, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions, TextField,
+  Box, Typography, Button, IconButton, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
-import { Close, CameraAlt, CropOriginal, Quiz, Share, ContentCopy } from '@mui/icons-material';
+import { Close, ContentCopy } from '@mui/icons-material';
 import QRCode from 'qrcode';
 import LivePresentation from './LivePresentation';
 import LiveHUD from './LiveHUD';
@@ -11,17 +11,14 @@ import desktopImage from '../../../image/电脑桌面.png';
 
 interface LiveSessionOverlayProps {
   classroomName: string;
-  displayStream: MediaStream;
   onClose: () => void;
 }
 
-export default function LiveSessionOverlay({ classroomName, displayStream, onClose }: LiveSessionOverlayProps) {
-  const stoppedRef = useRef(false);
-  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+export default function LiveSessionOverlay({ classroomName, onClose }: LiveSessionOverlayProps) {
   const [layoutMode, setLayoutMode] = useState<'teacher' | 'pip'>('teacher');
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
 
-  // 截屏
+  // 截屏（模拟）
   const [screenshotDataUrl, setScreenshotDataUrl] = useState('');
   const [screenshotOpen, setScreenshotOpen] = useState(false);
 
@@ -38,84 +35,47 @@ export default function LiveSessionOverlay({ classroomName, displayStream, onClo
   const [quizActive, setQuizActive] = useState(false);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
 
-  // 生成分享二维码
   useEffect(() => {
     QRCode.toDataURL(shareUrl, { width: 192, margin: 2 }).then(setQrDataUrl);
   }, [shareUrl]);
 
-  // PiP 拖拽
-  const [pipPos, setPipPos] = useState<{ top: number; left: number } | null>(null);
-  const isDragging = useRef(false);
-  const dragStart = useRef({ x: 0, y: 0, top: 0, left: 0 });
-  const pipRef = useRef<HTMLDivElement>(null);
-
-  const handlePipMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    const rect = pipRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const currentTop = pipPos?.top ?? rect.top;
-    const currentLeft = pipPos?.left ?? rect.left;
-    setPipPos({ top: currentTop, left: currentLeft });
-    dragStart.current = { x: e.clientX, y: e.clientY, top: currentTop, left: currentLeft };
-    isDragging.current = true;
-    const onMove = (ev: MouseEvent) => {
-      if (!isDragging.current) return;
-      setPipPos({
-        top: dragStart.current.top + ev.clientY - dragStart.current.y,
-        left: dragStart.current.left + ev.clientX - dragStart.current.x,
-      });
-    };
-    const onUp = () => {
-      isDragging.current = false;
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
-    };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  };
-
-  const handlePipTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    const rect = pipRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const currentTop = pipPos?.top ?? rect.top;
-    const currentLeft = pipPos?.left ?? rect.left;
-    setPipPos({ top: currentTop, left: currentLeft });
-    dragStart.current = { x: touch.clientX, y: touch.clientY, top: currentTop, left: currentLeft };
-    isDragging.current = true;
-    const onMove = (ev: TouchEvent) => {
-      if (!isDragging.current) return;
-      ev.preventDefault();
-      const t = ev.touches[0];
-      setPipPos({
-        top: dragStart.current.top + t.clientY - dragStart.current.y,
-        left: dragStart.current.left + t.clientX - dragStart.current.x,
-      });
-    };
-    const onEnd = () => {
-      isDragging.current = false;
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', onEnd);
-    };
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('touchend', onEnd);
-  };
-
-  // 截屏：从 displayStream 截取一帧
-  const captureScreenshot = useCallback(() => {
-    const video = document.querySelector('video');
-    if (!video || !video.videoWidth) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0);
-    setScreenshotDataUrl(canvas.toDataURL('image/png'));
-    setScreenshotOpen(true);
+  // 进入全屏（模拟，不调真实 API）
+  useEffect(() => {
+    const el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
+    }
   }, []);
 
-  // 答题器操作
+  // 监听 Esc 退出全屏
+  useEffect(() => {
+    const handler = () => {
+      if (!document.fullscreenElement) {
+        onClose();
+      }
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, [onClose]);
+
+  // 模拟截屏：在画布上画一张占位图
+  const captureScreenshot = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#1a1a2e';
+    ctx.fillRect(0, 0, 640, 480);
+    ctx.fillStyle = '#fff';
+    ctx.font = '24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('课堂截图', 320, 240);
+    setScreenshotDataUrl(canvas.toDataURL('image/png'));
+    setScreenshotOpen(true);
+  };
+
+  // 答题操作
   const addOption = () => { if (quizOptions.length < 6) setQuizOptions(prev => [...prev, '']); };
   const updateOption = (index: number, value: string) => setQuizOptions(prev => prev.map((o, i) => i === index ? value : o));
   const removeOption = (index: number) => { if (quizOptions.length > 2) setQuizOptions(prev => prev.filter((_, i) => i !== index)); };
@@ -141,45 +101,6 @@ export default function LiveSessionOverlay({ classroomName, displayStream, onClo
     setQuizSubmitted(false);
   };
 
-  // 启动摄像头作为 PiP，同时进入全屏
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-      setCameraStream(stream);
-    }).catch(() => {
-      // 无摄像头也能正常投屏
-    });
-    setTimeout(() => {
-      document.documentElement.requestFullscreen().catch(() => {});
-    }, 100);
-  }, []);
-
-  // 监听 Esc 退出全屏
-  useEffect(() => {
-    let mounted = true;
-    const handler = () => {
-      if (!document.fullscreenElement && !stoppedRef.current && mounted) {
-        doStop();
-      }
-    };
-    document.addEventListener('fullscreenchange', handler);
-    return () => { mounted = false; document.removeEventListener('fullscreenchange', handler); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const doStop = () => {
-    if (stoppedRef.current) return;
-    stoppedRef.current = true;
-    displayStream.getTracks().forEach(t => t.stop());
-    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
-    onClose();
-  };
-
-  const handleStop = () => {
-    setStopConfirmOpen(false);
-    doStop();
-  };
-
   const handleHUDAction = (action: 'photo' | 'screenshot' | 'quiz' | 'share' | 'stop') => {
     switch (action) {
       case 'photo': captureScreenshot(); break;
@@ -190,18 +111,23 @@ export default function LiveSessionOverlay({ classroomName, displayStream, onClo
     }
   };
 
+  const handleStop = () => {
+    setStopConfirmOpen(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    onClose();
+  };
+
   return (
     <>
       <LivePresentation
-        cameraStream={cameraStream}
-        displayStream={displayStream}
+        cameraStream={null}
         mediaItems={[]}
         activeOverlay={null}
         layoutMode={layoutMode}
-        pipPos={pipPos}
-        pipRef={pipRef as React.RefObject<HTMLDivElement | null>}
-        onPipMouseDown={handlePipMouseDown}
-        onPipTouchStart={handlePipTouchStart}
+        pipPos={null}
+        pipRef={null as any}
+        onPipMouseDown={() => {}}
+        onPipTouchStart={() => {}}
         desktopImage={desktopImage}
       />
       <LiveHUD
@@ -278,11 +204,11 @@ export default function LiveSessionOverlay({ classroomName, displayStream, onClo
         onResetQuiz={resetQuiz}
       />
 
-      {/* 停止直播确认弹窗 */}
+      {/* 停止确认弹窗 */}
       <Dialog open={stopConfirmOpen} onClose={() => setStopConfirmOpen(false)} maxWidth="xs">
-        <DialogTitle>停止直播</DialogTitle>
+        <DialogTitle>停止投屏</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">确定停止当前投屏直播？画面将停止共享并退出全屏。</Typography>
+          <Typography variant="body2">确定停止当前投屏直播？</Typography>
         </DialogContent>
         <DialogActions className="px-6 pb-4">
           <Button onClick={() => setStopConfirmOpen(false)} variant="outlined">取消</Button>

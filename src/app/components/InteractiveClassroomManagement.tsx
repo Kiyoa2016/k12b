@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Button, IconButton, Chip, TextField, InputAdornment,
   Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel,
@@ -58,41 +58,8 @@ export default function InteractiveClassroomManagement() {
   const [shareClassroom, setShareClassroom] = useState<Classroom | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [startCastClassroom, setStartCastClassroom] = useState<Classroom | null>(null);
-  const [liveSession, setLiveSession] = useState<{ name: string; displayStream: MediaStream } | null>(null);
-  const [displayName, setDisplayName] = useState('');
-  const displayStreamRef = useRef<MediaStream | null>(null);
-  const displayPreviewRef = useRef<HTMLVideoElement>(null);
-
-  const startScreenCapture = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-      });
-      displayStreamRef.current = stream;
-      const track = stream.getVideoTracks()[0];
-      setDisplayName(track.label || '屏幕');
-      if (displayPreviewRef.current) {
-        displayPreviewRef.current.srcObject = stream;
-      }
-      track.addEventListener('ended', () => {
-        displayStreamRef.current = null;
-        setDisplayName('');
-        if (displayPreviewRef.current) displayPreviewRef.current.srcObject = null;
-      });
-    } catch {
-      // 用户取消了选择
-    }
-  }, []);
-
-  // 弹窗关闭时清理屏幕共享（仅当未开始投屏时）
-  useEffect(() => {
-    if (!startCastClassroom && displayStreamRef.current) {
-      displayStreamRef.current.getTracks().forEach(t => t.stop());
-      displayStreamRef.current = null;
-      setDisplayName('');
-    }
-  }, [startCastClassroom]);
+  const [liveSession, setLiveSession] = useState<{ name: string } | null>(null);
+  const [screenSelected, setScreenSelected] = useState(false);
 
   useEffect(() => {
     if (shareClassroom) {
@@ -264,10 +231,10 @@ export default function InteractiveClassroomManagement() {
                   选择要共享的屏幕
                 </Typography>
 
-                {!displayStreamRef.current ? (
+                {!screenSelected ? (
                   <Box
                     className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all"
-                    onClick={startScreenCapture}
+                    onClick={() => setScreenSelected(true)}
                   >
                     <Box className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
                       <Cast className="text-gray-500" sx={{ fontSize: 32 }} />
@@ -276,27 +243,21 @@ export default function InteractiveClassroomManagement() {
                       点击选择要共享的屏幕
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      可选择整个屏幕、应用窗口或浏览器标签页
+                      （模拟选择，不调用真实 API）
                     </Typography>
                   </Box>
                 ) : (
                   <Box>
-                    <Box className="relative bg-black rounded-lg overflow-hidden mb-3" sx={{ aspectRatio: '16/9' }}>
-                      <video ref={displayPreviewRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+                    <Box className="relative bg-gray-900 rounded-lg overflow-hidden mb-3 flex items-center justify-center" sx={{ aspectRatio: '16/9' }}>
+                      <img src="../../../image/电脑桌面.png" alt="桌面预览" className="w-full h-full object-contain" />
                     </Box>
                     <Box className="flex items-center justify-between">
                       <Box className="flex items-center gap-2">
                         <Videocam fontSize="small" className="text-green-500" />
-                        <Typography variant="body2" className="font-medium">{displayName}</Typography>
+                        <Typography variant="body2" className="font-medium">电脑桌面</Typography>
                       </Box>
                       <Button size="small" variant="outlined" color="error"
-                        onClick={() => {
-                          if (displayStreamRef.current) {
-                            displayStreamRef.current.getTracks().forEach(t => t.stop());
-                            displayStreamRef.current = null;
-                          }
-                          setDisplayName('');
-                        }}>
+                        onClick={() => setScreenSelected(false)}>
                         重新选择
                       </Button>
                     </Box>
@@ -305,13 +266,10 @@ export default function InteractiveClassroomManagement() {
               </Box>
 
               <Button variant="contained" size="large" fullWidth
-                disabled={!displayStreamRef.current}
+                disabled={!screenSelected}
                 startIcon={<Cast />}
                 onClick={() => {
-                  if (!displayStreamRef.current) return;
-                  const session = { name: startCastClassroom.name, displayStream: displayStreamRef.current };
-                  displayStreamRef.current = null; // 转移所有权，防止清理时被 stop
-                  setLiveSession(session);
+                  setLiveSession({ name: startCastClassroom.name });
                   setStartCastClassroom(null);
                 }}
                 sx={{ py: 1.5, borderRadius: 2, fontSize: 16 }}>
@@ -412,7 +370,6 @@ export default function InteractiveClassroomManagement() {
       {liveSession && (
         <LiveSessionOverlay
           classroomName={liveSession.name}
-          displayStream={liveSession.displayStream}
           onClose={() => setLiveSession(null)}
         />
       )}
