@@ -12,6 +12,7 @@ import QRCode from 'qrcode';
 import desktopImage from '../../../image/电脑桌面.png';
 import LivePresentation from './LivePresentation';
 import LiveHUD from './LiveHUD';
+import QuizDialog from './QuizDialog';
 
 type LayoutMode = 'teacher' | 'pip';
 
@@ -61,6 +62,7 @@ export default function OnlineInteractiveClassroom() {
 
   // 停止直播确认弹窗
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
+  const [quizDialogOpen, setQuizDialogOpen] = useState(false);
 
   // 语音通话
   const [callParticipant, setCallParticipant] = useState<string | null>(null);
@@ -343,7 +345,7 @@ export default function OnlineInteractiveClassroom() {
     switch (action) {
       case 'photo': setCameraDialogOpen(true); break;
       case 'screenshot': captureScreenshot(); break;
-      case 'quiz': /* TODO: open quiz dialog in Task 4 */ break;
+      case 'quiz': setQuizDialogOpen(true); break;
       case 'share': setShareDialogOpen(true); break;
       case 'stop': setStopConfirmOpen(true); break;
     }
@@ -517,6 +519,24 @@ export default function OnlineInteractiveClassroom() {
             <Button onClick={() => setShareDialogOpen(false)} variant="outlined">关闭</Button>
           </DialogActions>
         </Dialog>
+
+        {/* 答题弹窗 */}
+        <QuizDialog
+          open={quizDialogOpen}
+          onClose={() => setQuizDialogOpen(false)}
+          quizQuestion={quizQuestion}
+          quizOptions={quizOptions}
+          quizVotes={quizVotes}
+          quizActive={quizActive}
+          quizSubmitted={quizSubmitted}
+          onQuestionChange={setQuizQuestion}
+          onOptionChange={updateOption}
+          onAddOption={addOption}
+          onRemoveOption={removeOption}
+          onStartQuiz={startQuiz}
+          onSimulateVotes={simulateVotes}
+          onResetQuiz={resetQuiz}
+        />
 
         {/* 停止直播确认弹窗 */}
         <Dialog open={stopConfirmOpen} onClose={() => setStopConfirmOpen(false)} maxWidth="xs">
