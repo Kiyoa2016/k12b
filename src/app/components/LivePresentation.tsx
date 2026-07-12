@@ -1,14 +1,6 @@
+import type { LayoutMode, MediaItem } from '@/types/classroom';
 import { Box } from '@mui/material';
 import { Videocam } from '@mui/icons-material';
-
-type LayoutMode = 'teacher' | 'pip';
-
-interface MediaItem {
-  id: string;
-  src: string;
-  name: string;
-  type: 'photo' | 'upload' | 'screenshot';
-}
 
 interface LivePresentationProps {
   cameraStream: MediaStream | null;

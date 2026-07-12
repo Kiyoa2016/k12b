@@ -1,11 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Box, Typography, Chip, IconButton, Tooltip } from '@mui/material';
+import type { LayoutMode } from '@/types/classroom';
 import {
   Videocam, PictureInPicture, CameraAlt, CropOriginal,
   Quiz, Share, StopCircle, FiberManualRecord,
 } from '@mui/icons-material';
-
-type LayoutMode = 'teacher' | 'pip';
 
 interface LiveHUDProps {
   onlineCount: number;

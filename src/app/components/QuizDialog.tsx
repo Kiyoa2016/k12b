@@ -1,4 +1,4 @@
-import { Box, Typography, Button, IconButton, TextField, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Box, Typography, Button, IconButton, TextField, Dialog, DialogTitle, DialogContent } from '@mui/material';
 import { Close, Quiz as QuizIcon } from '@mui/icons-material';
 
 interface QuizDialogProps {
@@ -86,7 +86,7 @@ export default function QuizDialog({
                   })}
                   <Typography variant="caption" color="text.secondary">共 {totalVotes} 票</Typography>
                   <Box className="flex gap-2 mt-2">
-                    <Button size="small" variant="outlined" onClick={onSimulateVotes}>模拟投票</Button>
+                    <Button size="small" variant="outlined" onClick={onSimulateVotes}>{quizSubmitted ? "重新模拟" : "模拟投票"}</Button>
                     <Button size="small" variant="text" color="error" onClick={onResetQuiz}>重置</Button>
                   </Box>
                 </Box>

@@ -8,29 +8,12 @@ import {
   Share, StopCircle, PlayArrow, PictureInPicture,
   CropOriginal, Quiz, Close, ContentCopy, People, MoreVert,
 } from '@mui/icons-material';
+import type { LayoutMode, MediaItem, Participant } from '@/types/classroom';
 import QRCode from 'qrcode';
 import desktopImage from '../../../image/电脑桌面.png';
 import LivePresentation from './LivePresentation';
 import LiveHUD from './LiveHUD';
 import QuizDialog from './QuizDialog';
-
-type LayoutMode = 'teacher' | 'pip';
-
-interface MediaItem {
-  id: string;
-  src: string;        // data URL or blob URL
-  name: string;
-  type: 'photo' | 'upload' | 'screenshot';
-}
-
-interface Participant {
-  id: string;
-  name: string;
-  role: 'teacher' | 'student';
-  avatar?: string;
-  online: boolean;
-  handRaised?: { message: string };
-}
 
 export default function OnlineInteractiveClassroom() {
   // 直播状态
@@ -38,6 +21,7 @@ export default function OnlineInteractiveClassroom() {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('teacher');
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const isStartingLive = useRef(false);
 
   // 媒体项
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
@@ -146,6 +130,7 @@ export default function OnlineInteractiveClassroom() {
 
   // 摄像头错误
   const [cameraError, setCameraError] = useState('');
+  const [copyError, setCopyError] = useState('');
 
   // 截屏
   const liveAreaRef = useRef<HTMLDivElement>(null);
@@ -316,6 +301,8 @@ export default function OnlineInteractiveClassroom() {
     if (isLive) {
       setStopConfirmOpen(true);  // 改为弹出确认
     } else {
+      if (isStartingLive.current) return;
+      isStartingLive.current = true;
       // 开始推流
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -327,6 +314,8 @@ export default function OnlineInteractiveClassroom() {
         }, 100);
       } catch {
         setCameraError('无法启动摄像头/麦克风');
+      } finally {
+        isStartingLive.current = false;
       }
     }
   };
@@ -509,7 +498,7 @@ export default function OnlineInteractiveClassroom() {
               <Box className="w-full p-3 bg-gray-50 rounded-lg flex items-center gap-2">
                 <Typography variant="body2" className="flex-1 truncate text-gray-600 font-mono text-sm">{shareUrl}</Typography>
                 <Button size="small" variant="outlined" startIcon={<ContentCopy />}
-                  onClick={() => navigator.clipboard.writeText(shareUrl).catch(() => setCameraError('复制失败'))}>
+                  onClick={() => navigator.clipboard.writeText(shareUrl).catch(() => setCopyError('复制链接失败，请手动复制'))}>
                   复制
                 </Button>
               </Box>
@@ -582,6 +571,11 @@ export default function OnlineInteractiveClassroom() {
       {cameraError && (
         <Alert severity="error" onClose={() => setCameraError('')} className="mx-6 mt-2">
           {cameraError}
+        </Alert>
+      )}
+      {copyError && (
+        <Alert severity="warning" onClose={() => setCopyError('')} className="mx-6 mt-2">
+          {copyError}
         </Alert>
       )}
 
@@ -952,7 +946,7 @@ export default function OnlineInteractiveClassroom() {
               <Button size="small" variant="outlined" startIcon={<ContentCopy />}
                 onClick={() => {
                   navigator.clipboard.writeText(shareUrl).catch(() => {
-                    setCameraError('复制链接失败，请手动复制');
+                    setCopyError('复制链接失败，请手动复制');
                   });
                 }}>
                 复制
