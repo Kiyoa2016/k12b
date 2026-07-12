@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Box, Typography, Button, IconButton, Chip, TextField, InputAdornment,
   Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
-  Paper, Divider,
+  Paper,
 } from '@mui/material';
 import {
-  Add, Search, Edit, Delete, Close, Videocam, School, People,
+  Add, Search, Edit, Delete, Close, Videocam, School, People, Share, ContentCopy, OpenInNew,
 } from '@mui/icons-material';
+import QRCode from 'qrcode';
 
 interface Classroom {
   id: string;
@@ -52,6 +53,16 @@ export default function InteractiveClassroomManagement() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [createOpen, setCreateOpen] = useState(false);
   const [createForm, setCreateForm] = useState({ name: '', teacher: '', subject: '', grade: '' });
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [shareClassroom, setShareClassroom] = useState<Classroom | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+
+  useEffect(() => {
+    if (shareClassroom) {
+      const url = `https://live.example.com/classroom/${shareClassroom.id}`;
+      QRCode.toDataURL(url, { width: 192, margin: 2 }).then(setQrDataUrl);
+    }
+  }, [shareClassroom]);
 
   const statusLabel: Record<Classroom['status'], string> = { live: '直播中', ended: '已结束', scheduled: '待开始' };
   const statusColor: Record<Classroom['status'], 'success' | 'default' | 'warning'> = { live: 'success', ended: 'default', scheduled: 'warning' };
@@ -67,6 +78,12 @@ export default function InteractiveClassroomManagement() {
   }, [classrooms, searchTerm]);
 
   const displayedRows = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
+  const getShareUrl = (c: Classroom) => `https://live.example.com/classroom/${c.id}`;
+
+  const handleCopyLink = (c: Classroom) => {
+    navigator.clipboard.writeText(getShareUrl(c)).catch(() => {});
+  };
 
   const handleCreate = () => {
     if (!createForm.name || !createForm.teacher || !createForm.subject || !createForm.grade) return;
@@ -150,8 +167,12 @@ export default function InteractiveClassroomManagement() {
                     </Box>
                   </TableCell>
                   <TableCell align="right">
-                    <IconButton size="small" className="text-gray-400"><Edit fontSize="small" /></IconButton>
-                    <IconButton size="small" className="text-gray-400"><Delete fontSize="small" /></IconButton>
+                    <IconButton size="small" className="text-gray-400" title="分享"
+                      onClick={() => { setShareClassroom(c); setShareDialogOpen(true); }}>
+                      <Share fontSize="small" />
+                    </IconButton>
+                    <IconButton size="small" className="text-gray-400" title="编辑"><Edit fontSize="small" /></IconButton>
+                    <IconButton size="small" className="text-gray-400" title="删除"><Delete fontSize="small" /></IconButton>
                   </TableCell>
                 </TableRow>
               ))
@@ -172,6 +193,52 @@ export default function InteractiveClassroomManagement() {
         labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 共 ${count}`}
         className="border-t border-gray-200"
       />
+
+      {/* 分享弹窗 */}
+      <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle className="border-b">
+          <Box className="flex items-center justify-between">
+            <Typography variant="h6">分享课堂</Typography>
+            <IconButton onClick={() => setShareDialogOpen(false)} size="small"><Close /></IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {shareClassroom && (
+            <Box className="py-6 flex flex-col items-center gap-4">
+              <Typography variant="subtitle1" className="font-semibold">{shareClassroom.name}</Typography>
+              <Typography variant="body2" color="text.secondary">{shareClassroom.teacher} · {shareClassroom.subject}</Typography>
+              {/* 二维码 */}
+              <Box className="w-48 h-48 bg-white rounded-xl flex items-center justify-center border border-gray-200">
+                {qrDataUrl ? (
+                  <img src={qrDataUrl} alt="QR Code" className="w-full h-full" />
+                ) : (
+                  <Typography variant="caption" color="text.secondary">生成中...</Typography>
+                )}
+              </Box>
+              <Typography variant="body2" color="text.secondary" className="text-center">
+                扫码加入互动课堂
+              </Typography>
+              {/* 链接 */}
+              <Box className="w-full p-3 bg-gray-50 rounded-lg flex items-center gap-2">
+                <Typography variant="body2" className="flex-1 truncate text-gray-600 font-mono text-sm">
+                  {getShareUrl(shareClassroom)}
+                </Typography>
+                <Button size="small" variant="outlined" startIcon={<ContentCopy />}
+                  onClick={() => handleCopyLink(shareClassroom)}>
+                  复制
+                </Button>
+              </Box>
+              <Button variant="contained" startIcon={<OpenInNew />} fullWidth
+                onClick={() => { setShareDialogOpen(false); }}>
+                进入课堂
+              </Button>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions className="px-6 pb-4">
+          <Button onClick={() => setShareDialogOpen(false)} variant="outlined">关闭</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* 创建课堂弹窗 */}
       <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
