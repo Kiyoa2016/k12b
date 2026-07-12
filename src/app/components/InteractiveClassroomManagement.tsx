@@ -6,9 +6,10 @@ import {
   Paper,
 } from '@mui/material';
 import {
-  Add, Search, Edit, Delete, Close, Videocam, School, People, Share, ContentCopy, OpenInNew, PlayArrow,
+  Add, Search, Edit, Delete, Close, Videocam, School, People, Share, ContentCopy, OpenInNew, PlayArrow, Cast,
 } from '@mui/icons-material';
 import QRCode from 'qrcode';
+import LiveSessionOverlay from './LiveSessionOverlay';
 
 interface Classroom {
   id: string;
@@ -46,7 +47,7 @@ function generateMockData(): Classroom[] {
   }));
 }
 
-export default function InteractiveClassroomManagement({ onStartLive }: { onStartLive?: (classroom: Classroom) => void }) {
+export default function InteractiveClassroomManagement() {
   const [classrooms] = useState(generateMockData);
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(0);
@@ -56,6 +57,8 @@ export default function InteractiveClassroomManagement({ onStartLive }: { onStar
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareClassroom, setShareClassroom] = useState<Classroom | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
+  const [startCastClassroom, setStartCastClassroom] = useState<Classroom | null>(null);
+  const [liveSession, setLiveSession] = useState<Classroom | null>(null);
 
   useEffect(() => {
     if (shareClassroom) {
@@ -170,7 +173,7 @@ export default function InteractiveClassroomManagement({ onStartLive }: { onStar
                     {c.status === 'scheduled' && (
                       <Button size="small" variant="contained" color="success"
                         startIcon={<PlayArrow />}
-                        onClick={() => onStartLive?.(c)}
+                        onClick={() => setStartCastClassroom(c)}
                         sx={{ mr: 1, height: 28, fontSize: 12 }}>
                         开始直播
                       </Button>
@@ -201,6 +204,41 @@ export default function InteractiveClassroomManagement({ onStartLive }: { onStar
         labelDisplayedRows={({ from, to, count }) => `${from}-${to} / 共 ${count}`}
         className="border-t border-gray-200"
       />
+
+      {/* 投屏确认弹窗 */}
+      <Dialog open={Boolean(startCastClassroom)} onClose={() => setStartCastClassroom(null)} maxWidth="sm" fullWidth>
+        <DialogTitle className="border-b">
+          <Box className="flex items-center justify-between">
+            <Typography variant="h6">准备投屏直播</Typography>
+            <IconButton onClick={() => setStartCastClassroom(null)} size="small"><Close /></IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {startCastClassroom && (
+            <Box className="py-6 flex flex-col items-center gap-4">
+              <Box className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
+                <Cast className="text-blue-600" sx={{ fontSize: 40 }} />
+              </Box>
+              <Typography variant="h6" className="font-semibold">{startCastClassroom.name}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                {startCastClassroom.teacher} · {startCastClassroom.subject} · {startCastClassroom.grade}
+              </Typography>
+              <Typography variant="body2" color="text.secondary" className="text-center">
+                即将开始直播投屏，画面将显示电脑桌面内容。
+              </Typography>
+              <Button variant="contained" size="large" fullWidth
+                startIcon={<Cast />}
+                onClick={() => {
+                  setLiveSession(startCastClassroom);
+                  setStartCastClassroom(null);
+                }}
+                sx={{ py: 1.5, borderRadius: 2, fontSize: 16 }}>
+                开始投屏
+              </Button>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* 分享弹窗 */}
       <Dialog open={shareDialogOpen} onClose={() => setShareDialogOpen(false)} maxWidth="sm" fullWidth>
@@ -288,6 +326,13 @@ export default function InteractiveClassroomManagement({ onStartLive }: { onStar
           </Button>
         </DialogActions>
       </Dialog>
+
+      {liveSession && (
+        <LiveSessionOverlay
+          classroomName={liveSession.name}
+          onClose={() => setLiveSession(null)}
+        />
+      )}
     </Box>
   );
 }

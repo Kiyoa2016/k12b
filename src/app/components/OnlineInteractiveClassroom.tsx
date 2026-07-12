@@ -15,7 +15,7 @@ import LivePresentation from './LivePresentation';
 import LiveHUD from './LiveHUD';
 import QuizDialog from './QuizDialog';
 
-export default function OnlineInteractiveClassroom({ autoStart, onAutoStartDone }: { autoStart?: boolean; onAutoStartDone?: () => void }) {
+export default function OnlineInteractiveClassroom() {
   // 直播状态
   const [isLive, setIsLive] = useState(false);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('teacher');
@@ -377,16 +377,6 @@ export default function OnlineInteractiveClassroom({ autoStart, onAutoStartDone 
     document.addEventListener('fullscreenchange', handler);
     return () => document.removeEventListener('fullscreenchange', handler);
   }, [isLive, cameraStream]);
-
-  // 从管理页面跳转过来时自动开播
-  useEffect(() => {
-    if (autoStart && !isLive) {
-      toggleLive();
-      onAutoStartDone?.();
-    }
-    // 只首次执行
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // 渲染直播画面区 — 根据布局模式
   const renderLiveArea = () => {
