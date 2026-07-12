@@ -1,19 +1,18 @@
 import { useState, useRef, useEffect } from 'react';
 import {
-  Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions, IconButton,
+  Box, Typography, Button, Dialog, DialogTitle, DialogContent, DialogActions,
 } from '@mui/material';
-import { StopCircle, Close } from '@mui/icons-material';
 import LivePresentation from './LivePresentation';
 import LiveHUD from './LiveHUD';
 import desktopImage from '../../../image/电脑桌面.png';
 
 interface LiveSessionOverlayProps {
   classroomName: string;
-  videoDeviceId?: string;
+  displayStream: MediaStream;
   onClose: () => void;
 }
 
-export default function LiveSessionOverlay({ classroomName, videoDeviceId, onClose }: LiveSessionOverlayProps) {
+export default function LiveSessionOverlay({ classroomName, displayStream, onClose }: LiveSessionOverlayProps) {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [layoutMode, setLayoutMode] = useState<'teacher' | 'pip'>('teacher');
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
@@ -76,31 +75,23 @@ export default function LiveSessionOverlay({ classroomName, videoDeviceId, onClo
     document.addEventListener('touchend', onEnd);
   };
 
-  // 启动摄像头并进入全屏
+  // 启动摄像头作为 PiP，同时进入全屏
   useEffect(() => {
-    const videoConstraints: MediaTrackConstraints = videoDeviceId
-      ? { deviceId: { exact: videoDeviceId } }
-      : true;
-    navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true })
-      .then(stream => {
-        setCameraStream(stream);
-        setTimeout(() => {
-          document.documentElement.requestFullscreen().catch(() => {});
-        }, 100);
-      })
-      .catch(() => {
-        // 无摄像头也能进入全屏
-        setTimeout(() => {
-          document.documentElement.requestFullscreen().catch(() => {});
-        }, 100);
-      });
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      setCameraStream(stream);
+    }).catch(() => {
+      // 无摄像头也能正常投屏
+    });
+    setTimeout(() => {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }, 100);
   }, []);
 
   // 监听 Esc 退出全屏
   useEffect(() => {
     const handler = () => {
       if (!document.fullscreenElement) {
-        cleanup();
+        doStop();
       }
     };
     document.addEventListener('fullscreenchange', handler);
@@ -108,21 +99,16 @@ export default function LiveSessionOverlay({ classroomName, videoDeviceId, onClo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const cleanup = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
-    }
+  const doStop = () => {
+    displayStream.getTracks().forEach(t => t.stop());
+    if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
     if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     onClose();
   };
 
   const handleStop = () => {
-    if (cameraStream) {
-      cameraStream.getTracks().forEach(t => t.stop());
-    }
-    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
     setStopConfirmOpen(false);
-    onClose();
+    doStop();
   };
 
   const handleHUDAction = (action: 'photo' | 'screenshot' | 'quiz' | 'share' | 'stop') => {
@@ -133,6 +119,7 @@ export default function LiveSessionOverlay({ classroomName, videoDeviceId, onClo
     <>
       <LivePresentation
         cameraStream={cameraStream}
+        displayStream={displayStream}
         mediaItems={[]}
         activeOverlay={null}
         layoutMode={layoutMode}
@@ -149,15 +136,14 @@ export default function LiveSessionOverlay({ classroomName, videoDeviceId, onClo
         onAction={handleHUDAction}
       />
 
-      {/* 停止直播确认弹窗 */}
       <Dialog open={stopConfirmOpen} onClose={() => setStopConfirmOpen(false)} maxWidth="xs">
         <DialogTitle>停止直播</DialogTitle>
         <DialogContent>
-          <Typography variant="body2">确定停止当前直播？画面将停止推流并退出全屏。</Typography>
+          <Typography variant="body2">确定停止当前投屏直播？画面将停止共享并退出全屏。</Typography>
         </DialogContent>
         <DialogActions className="px-6 pb-4">
           <Button onClick={() => setStopConfirmOpen(false)} variant="outlined">取消</Button>
-          <Button onClick={handleStop} variant="contained" color="error">停止直播</Button>
+          <Button onClick={handleStop} variant="contained" color="error">停止投屏</Button>
         </DialogActions>
       </Dialog>
     </>

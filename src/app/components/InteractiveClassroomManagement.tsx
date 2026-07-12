@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Box, Typography, Button, IconButton, Chip, TextField, InputAdornment,
   Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel,
@@ -58,69 +58,44 @@ export default function InteractiveClassroomManagement() {
   const [shareClassroom, setShareClassroom] = useState<Classroom | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [startCastClassroom, setStartCastClassroom] = useState<Classroom | null>(null);
-  const [liveSession, setLiveSession] = useState<{ name: string; videoDeviceId?: string } | null>(null);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedVideoDevice, setSelectedVideoDevice] = useState('');
-  const previewVideoRef = useRef<HTMLVideoElement>(null);
-  const previewStreamRef = useRef<MediaStream | null>(null);
+  const [liveSession, setLiveSession] = useState<{ name: string; displayStream: MediaStream } | null>(null);
+  const [displayStream, setDisplayStream] = useState<MediaStream | null>(null);
+  const [displayName, setDisplayName] = useState('');
+  const displayPreviewRef = useRef<HTMLVideoElement>(null);
 
-  const stopPreview = () => {
-    if (previewStreamRef.current) {
-      previewStreamRef.current.getTracks().forEach(t => t.stop());
-      previewStreamRef.current = null;
-    }
-  };
-
-  const startPreview = async (deviceId: string) => {
-    stopPreview();
+  const startScreenCapture = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { deviceId: { exact: deviceId } },
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true,
       });
-      previewStreamRef.current = stream;
-      if (previewVideoRef.current) {
-        previewVideoRef.current.srcObject = stream;
+      setDisplayStream(stream);
+      // 从轨道标签获取显示名称
+      const track = stream.getVideoTracks()[0];
+      setDisplayName(track.label || '屏幕');
+      // 显示预览
+      if (displayPreviewRef.current) {
+        displayPreviewRef.current.srcObject = stream;
       }
+      // 用户如果点击浏览器的"停止共享"，自动清理
+      track.addEventListener('ended', () => {
+        setDisplayStream(null);
+        setDisplayName('');
+        if (displayPreviewRef.current) displayPreviewRef.current.srcObject = null;
+      });
     } catch {
-      // 无法启动预览
+      // 用户取消了选择
     }
-  };
+  }, []);
 
-  // 打开投屏弹窗时枚举视频设备
+  // 弹窗关闭时清理屏幕共享
   useEffect(() => {
-    if (!startCastClassroom) {
-      stopPreview();
-      return;
+    if (!startCastClassroom && displayStream) {
+      displayStream.getTracks().forEach(t => t.stop());
+      setDisplayStream(null);
+      setDisplayName('');
     }
-    // 先请求一次权限才能获取设备标签
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-      stream.getTracks().forEach(t => t.stop());
-      navigator.mediaDevices.enumerateDevices().then(devices => {
-        const vids = devices.filter(d => d.kind === 'videoinput');
-        setVideoDevices(vids);
-        if (vids.length > 0) {
-          setSelectedVideoDevice(vids[0].deviceId);
-          startPreview(vids[0].deviceId);
-        }
-      });
-    }).catch(() => {
-      navigator.mediaDevices.enumerateDevices().then(devices => {
-        const vids = devices.filter(d => d.kind === 'videoinput');
-        setVideoDevices(vids);
-        if (vids.length > 0) {
-          setSelectedVideoDevice(vids[0].deviceId);
-          startPreview(vids[0].deviceId);
-        }
-      });
-    });
-  }, [startCastClassroom]);
-
-  // 切换选中的视频源时更新预览
-  useEffect(() => {
-    if (selectedVideoDevice && startCastClassroom) {
-      startPreview(selectedVideoDevice);
-    }
-  }, [selectedVideoDevice]);
+  }, [startCastClassroom, displayStream]);
 
   useEffect(() => {
     if (shareClassroom) {
@@ -286,72 +261,58 @@ export default function InteractiveClassroomManagement() {
                 {startCastClassroom.teacher} · {startCastClassroom.subject} · {startCastClassroom.grade}
               </Typography>
 
-              {/* 视频源选择 */}
+              {/* 屏幕共享选择 */}
               <Box className="w-full">
                 <Typography variant="subtitle2" className="font-semibold mb-2">
-                  选择视频源
+                  选择要共享的屏幕
                 </Typography>
 
-                {/* 实时预览 */}
-                {videoDevices.length > 0 && (
-                  <Box className="relative bg-black rounded-lg overflow-hidden mb-3" sx={{ aspectRatio: '16/9' }}>
-                    <video ref={previewVideoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
-                    {!previewStreamRef.current && (
-                      <Box className="absolute inset-0 flex items-center justify-center text-gray-500">
-                        <Videocam sx={{ fontSize: 40 }} />
+                {!displayStream ? (
+                  <Box
+                    className="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-all"
+                    onClick={startScreenCapture}
+                  >
+                    <Box className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+                      <Cast className="text-gray-500" sx={{ fontSize: 32 }} />
+                    </Box>
+                    <Typography variant="body1" className="font-medium mb-1">
+                      点击选择要共享的屏幕
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      可选择整个屏幕、应用窗口或浏览器标签页
+                    </Typography>
+                  </Box>
+                ) : (
+                  <Box>
+                    <Box className="relative bg-black rounded-lg overflow-hidden mb-3" sx={{ aspectRatio: '16/9' }}>
+                      <video ref={displayPreviewRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+                    </Box>
+                    <Box className="flex items-center justify-between">
+                      <Box className="flex items-center gap-2">
+                        <Videocam fontSize="small" className="text-green-500" />
+                        <Typography variant="body2" className="font-medium">{displayName}</Typography>
                       </Box>
-                    )}
+                      <Button size="small" variant="outlined" color="error"
+                        onClick={() => {
+                          displayStream.getTracks().forEach(t => t.stop());
+                          setDisplayStream(null);
+                          setDisplayName('');
+                        }}>
+                        重新选择
+                      </Button>
+                    </Box>
                   </Box>
                 )}
-
-                <Box className="flex flex-col gap-2">
-                  {videoDevices.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" className="text-center py-3">
-                      未检测到摄像头设备
-                    </Typography>
-                  ) : (
-                    videoDevices.map((device, index) => (
-                      <Box
-                        key={device.deviceId}
-                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                          selectedVideoDevice === device.deviceId
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-blue-300'
-                        }`}
-                        onClick={() => setSelectedVideoDevice(device.deviceId)}
-                      >
-                        <Box className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-                          selectedVideoDevice === device.deviceId
-                            ? 'border-blue-500'
-                            : 'border-gray-300'
-                        }`}>
-                          {selectedVideoDevice === device.deviceId && (
-                            <Box className="w-3 h-3 rounded-full bg-blue-500" />
-                          )}
-                        </Box>
-                        <Videocam fontSize="small" className="text-gray-400 shrink-0" />
-                        <Box>
-                          <Typography variant="body2" className="font-medium">
-                            {device.label || `摄像头 ${index + 1}`}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    ))
-                  )}
-                </Box>
               </Box>
 
-              <Typography variant="body2" color="text.secondary" className="text-center">
-                即将开始直播投屏，画面将显示电脑桌面内容。
-              </Typography>
               <Button variant="contained" size="large" fullWidth
+                disabled={!displayStream}
                 startIcon={<Cast />}
                 onClick={() => {
-                  const session: { name: string; videoDeviceId?: string } = { name: startCastClassroom.name };
-                  if (selectedVideoDevice) session.videoDeviceId = selectedVideoDevice;
-                  // 先关闭弹窗停止预览，再启动直播
+                  if (!displayStream) return;
+                  const session = { name: startCastClassroom.name, displayStream };
+                  setLiveSession(session);
                   setStartCastClassroom(null);
-                  setTimeout(() => setLiveSession(session), 300);
                 }}
                 sx={{ py: 1.5, borderRadius: 2, fontSize: 16 }}>
                 开始投屏
@@ -451,7 +412,7 @@ export default function InteractiveClassroomManagement() {
       {liveSession && (
         <LiveSessionOverlay
           classroomName={liveSession.name}
-          videoDeviceId={liveSession.videoDeviceId}
+          displayStream={liveSession.displayStream}
           onClose={() => setLiveSession(null)}
         />
       )}

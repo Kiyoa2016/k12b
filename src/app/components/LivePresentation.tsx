@@ -4,6 +4,7 @@ import { Videocam } from '@mui/icons-material';
 
 interface LivePresentationProps {
   cameraStream: MediaStream | null;
+  displayStream?: MediaStream | null;
   mediaItems: MediaItem[];
   activeOverlay: string | null;
   layoutMode: LayoutMode;
@@ -15,7 +16,7 @@ interface LivePresentationProps {
 }
 
 export default function LivePresentation({
-  cameraStream, mediaItems, activeOverlay, layoutMode,
+  cameraStream, displayStream, mediaItems, activeOverlay, layoutMode,
   pipPos, pipRef, onPipMouseDown, onPipTouchStart, desktopImage,
 }: LivePresentationProps) {
 
@@ -23,9 +24,19 @@ export default function LivePresentation({
     ? mediaItems.find(m => m.id === activeOverlay)
     : null;
 
+  const renderMainContent = () => {
+    if (displayStream) {
+      return (
+        <video ref={(el) => { if (el) el.srcObject = displayStream; }} autoPlay playsInline muted
+          className="w-full h-full object-contain" />
+      );
+    }
+    return <img src={desktopImage} alt="电脑桌面" className="w-full h-full object-contain" />;
+  };
+
   const renderTeacherView = () => (
     <Box className="w-full h-full flex items-center justify-center">
-      <img src={desktopImage} alt="电脑桌面" className="w-full h-full object-contain" />
+      {renderMainContent()}
       {activeMedia && (
         <Box className="absolute bottom-3 right-3 w-32 h-24 rounded-lg overflow-hidden border-2 border-white shadow-lg">
           <img src={activeMedia.src} alt="overlay" className="w-full h-full object-cover" />
@@ -37,7 +48,7 @@ export default function LivePresentation({
   const renderPipView = () => (
     <Box className="relative w-full h-full">
       <Box className="w-full h-full flex items-center justify-center">
-        <img src={desktopImage} alt="电脑桌面" className="w-full h-full object-contain" />
+        {renderMainContent()}
       </Box>
       {/* PiP 小窗：教师摄像头 — 可拖拽 */}
       <Box
