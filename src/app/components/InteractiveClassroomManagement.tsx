@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Box, Typography, Button, IconButton, Chip, TextField, InputAdornment,
   Dialog, DialogTitle, DialogContent, DialogActions, Select, MenuItem, FormControl, InputLabel,
@@ -61,26 +61,66 @@ export default function InteractiveClassroomManagement() {
   const [liveSession, setLiveSession] = useState<{ name: string; videoDeviceId?: string } | null>(null);
   const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedVideoDevice, setSelectedVideoDevice] = useState('');
+  const previewVideoRef = useRef<HTMLVideoElement>(null);
+  const previewStreamRef = useRef<MediaStream | null>(null);
+
+  const stopPreview = () => {
+    if (previewStreamRef.current) {
+      previewStreamRef.current.getTracks().forEach(t => t.stop());
+      previewStreamRef.current = null;
+    }
+  };
+
+  const startPreview = async (deviceId: string) => {
+    stopPreview();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { deviceId: { exact: deviceId } },
+      });
+      previewStreamRef.current = stream;
+      if (previewVideoRef.current) {
+        previewVideoRef.current.srcObject = stream;
+      }
+    } catch {
+      // 无法启动预览
+    }
+  };
 
   // 打开投屏弹窗时枚举视频设备
   useEffect(() => {
-    if (!startCastClassroom) return;
+    if (!startCastClassroom) {
+      stopPreview();
+      return;
+    }
     // 先请求一次权限才能获取设备标签
     navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
       stream.getTracks().forEach(t => t.stop());
       navigator.mediaDevices.enumerateDevices().then(devices => {
         const vids = devices.filter(d => d.kind === 'videoinput');
         setVideoDevices(vids);
-        if (vids.length > 0) setSelectedVideoDevice(vids[0].deviceId);
+        if (vids.length > 0) {
+          setSelectedVideoDevice(vids[0].deviceId);
+          startPreview(vids[0].deviceId);
+        }
       });
     }).catch(() => {
       navigator.mediaDevices.enumerateDevices().then(devices => {
         const vids = devices.filter(d => d.kind === 'videoinput');
         setVideoDevices(vids);
-        if (vids.length > 0) setSelectedVideoDevice(vids[0].deviceId);
+        if (vids.length > 0) {
+          setSelectedVideoDevice(vids[0].deviceId);
+          startPreview(vids[0].deviceId);
+        }
       });
     });
   }, [startCastClassroom]);
+
+  // 切换选中的视频源时更新预览
+  useEffect(() => {
+    if (selectedVideoDevice && startCastClassroom) {
+      startPreview(selectedVideoDevice);
+    }
+  }, [selectedVideoDevice]);
 
   useEffect(() => {
     if (shareClassroom) {
@@ -251,6 +291,19 @@ export default function InteractiveClassroomManagement() {
                 <Typography variant="subtitle2" className="font-semibold mb-2">
                   选择视频源
                 </Typography>
+
+                {/* 实时预览 */}
+                {videoDevices.length > 0 && (
+                  <Box className="relative bg-black rounded-lg overflow-hidden mb-3" sx={{ aspectRatio: '16/9' }}>
+                    <video ref={previewVideoRef} autoPlay playsInline muted className="w-full h-full object-contain" />
+                    {!previewStreamRef.current && (
+                      <Box className="absolute inset-0 flex items-center justify-center text-gray-500">
+                        <Videocam sx={{ fontSize: 40 }} />
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
                 <Box className="flex flex-col gap-2">
                   {videoDevices.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" className="text-center py-3">
@@ -267,7 +320,7 @@ export default function InteractiveClassroomManagement() {
                         }`}
                         onClick={() => setSelectedVideoDevice(device.deviceId)}
                       >
-                        <Box className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                        <Box className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
                           selectedVideoDevice === device.deviceId
                             ? 'border-blue-500'
                             : 'border-gray-300'
@@ -276,6 +329,7 @@ export default function InteractiveClassroomManagement() {
                             <Box className="w-3 h-3 rounded-full bg-blue-500" />
                           )}
                         </Box>
+                        <Videocam fontSize="small" className="text-gray-400 shrink-0" />
                         <Box>
                           <Typography variant="body2" className="font-medium">
                             {device.label || `摄像头 ${index + 1}`}
@@ -295,8 +349,9 @@ export default function InteractiveClassroomManagement() {
                 onClick={() => {
                   const session: { name: string; videoDeviceId?: string } = { name: startCastClassroom.name };
                   if (selectedVideoDevice) session.videoDeviceId = selectedVideoDevice;
-                  setLiveSession(session);
+                  // 先关闭弹窗停止预览，再启动直播
                   setStartCastClassroom(null);
+                  setTimeout(() => setLiveSession(session), 300);
                 }}
                 sx={{ py: 1.5, borderRadius: 2, fontSize: 16 }}>
                 开始投屏
