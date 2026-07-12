@@ -9,10 +9,11 @@ import desktopImage from '../../../image/电脑桌面.png';
 
 interface LiveSessionOverlayProps {
   classroomName: string;
+  videoDeviceId?: string;
   onClose: () => void;
 }
 
-export default function LiveSessionOverlay({ classroomName, onClose }: LiveSessionOverlayProps) {
+export default function LiveSessionOverlay({ classroomName, videoDeviceId, onClose }: LiveSessionOverlayProps) {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const [layoutMode, setLayoutMode] = useState<'teacher' | 'pip'>('teacher');
   const [stopConfirmOpen, setStopConfirmOpen] = useState(false);
@@ -77,7 +78,10 @@ export default function LiveSessionOverlay({ classroomName, onClose }: LiveSessi
 
   // 启动摄像头并进入全屏
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+    const videoConstraints: MediaTrackConstraints = videoDeviceId
+      ? { deviceId: { exact: videoDeviceId } }
+      : true;
+    navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: true })
       .then(stream => {
         setCameraStream(stream);
         setTimeout(() => {

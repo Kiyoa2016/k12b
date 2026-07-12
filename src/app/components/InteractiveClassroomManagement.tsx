@@ -58,7 +58,29 @@ export default function InteractiveClassroomManagement() {
   const [shareClassroom, setShareClassroom] = useState<Classroom | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [startCastClassroom, setStartCastClassroom] = useState<Classroom | null>(null);
-  const [liveSession, setLiveSession] = useState<Classroom | null>(null);
+  const [liveSession, setLiveSession] = useState<{ name: string; videoDeviceId?: string } | null>(null);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedVideoDevice, setSelectedVideoDevice] = useState('');
+
+  // 打开投屏弹窗时枚举视频设备
+  useEffect(() => {
+    if (!startCastClassroom) return;
+    // 先请求一次权限才能获取设备标签
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      stream.getTracks().forEach(t => t.stop());
+      navigator.mediaDevices.enumerateDevices().then(devices => {
+        const vids = devices.filter(d => d.kind === 'videoinput');
+        setVideoDevices(vids);
+        if (vids.length > 0) setSelectedVideoDevice(vids[0].deviceId);
+      });
+    }).catch(() => {
+      navigator.mediaDevices.enumerateDevices().then(devices => {
+        const vids = devices.filter(d => d.kind === 'videoinput');
+        setVideoDevices(vids);
+        if (vids.length > 0) setSelectedVideoDevice(vids[0].deviceId);
+      });
+    });
+  }, [startCastClassroom]);
 
   useEffect(() => {
     if (shareClassroom) {
@@ -223,13 +245,57 @@ export default function InteractiveClassroomManagement() {
               <Typography variant="body2" color="text.secondary">
                 {startCastClassroom.teacher} · {startCastClassroom.subject} · {startCastClassroom.grade}
               </Typography>
+
+              {/* 视频源选择 */}
+              <Box className="w-full">
+                <Typography variant="subtitle2" className="font-semibold mb-2">
+                  选择视频源
+                </Typography>
+                <Box className="flex flex-col gap-2">
+                  {videoDevices.length === 0 ? (
+                    <Typography variant="body2" color="text.secondary" className="text-center py-3">
+                      未检测到摄像头设备
+                    </Typography>
+                  ) : (
+                    videoDevices.map((device, index) => (
+                      <Box
+                        key={device.deviceId}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          selectedVideoDevice === device.deviceId
+                            ? 'border-blue-500 bg-blue-50'
+                            : 'border-gray-200 hover:border-blue-300'
+                        }`}
+                        onClick={() => setSelectedVideoDevice(device.deviceId)}
+                      >
+                        <Box className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                          selectedVideoDevice === device.deviceId
+                            ? 'border-blue-500'
+                            : 'border-gray-300'
+                        }`}>
+                          {selectedVideoDevice === device.deviceId && (
+                            <Box className="w-3 h-3 rounded-full bg-blue-500" />
+                          )}
+                        </Box>
+                        <Box>
+                          <Typography variant="body2" className="font-medium">
+                            {device.label || `摄像头 ${index + 1}`}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    ))
+                  )}
+                </Box>
+              </Box>
+
               <Typography variant="body2" color="text.secondary" className="text-center">
                 即将开始直播投屏，画面将显示电脑桌面内容。
               </Typography>
               <Button variant="contained" size="large" fullWidth
                 startIcon={<Cast />}
                 onClick={() => {
-                  setLiveSession(startCastClassroom);
+                  const session: { name: string; videoDeviceId?: string } = { name: startCastClassroom.name };
+                  if (selectedVideoDevice) session.videoDeviceId = selectedVideoDevice;
+                  setLiveSession(session);
                   setStartCastClassroom(null);
                 }}
                 sx={{ py: 1.5, borderRadius: 2, fontSize: 16 }}>
@@ -330,6 +396,7 @@ export default function InteractiveClassroomManagement() {
       {liveSession && (
         <LiveSessionOverlay
           classroomName={liveSession.name}
+          videoDeviceId={liveSession.videoDeviceId}
           onClose={() => setLiveSession(null)}
         />
       )}
